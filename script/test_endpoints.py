@@ -2,12 +2,11 @@
 
 
 from pathlib import Path
-from dataclasses import asdict
-
 from pretty_cli import PrettyCli
 
 from local.api import TisV2Api
 from local.request_schema import JobParams, RefPanel, Build, Phasing, Mode
+from local.util import display
 
 
 TEST_FILE = Path("data/chr20.R50.merged.1.330k.recode.unphased.small.vcf.gz")
@@ -17,27 +16,6 @@ assert TEST_FILE.is_file()
 def get_vcf():
     file_handle = open(TEST_FILE, "rb")
     return file_handle
-
-
-def display(cli: PrettyCli, obj) -> None:
-    out = asdict(obj)
-
-    def _flatten(d: dict) -> dict:
-        keys = list(d.keys())
-
-        for k in keys:
-            if d[k] is None:
-                del d[k]
-            elif isinstance(d[k], list):
-                if len(d[k]) > 0:
-                    d[k] = { i: _flatten(val) for (i, val) in enumerate(d[k]) }
-                else:
-                    del d[k]
-
-        return d
-
-    _flatten(out)
-    cli.print(out)
 
 
 def main() -> None:

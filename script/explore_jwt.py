@@ -12,6 +12,15 @@ from dataclasses import dataclass
 from pretty_cli import PrettyCli
 
 
+def check_file(arg_value: str) -> Path:
+    path = Path(arg_value)
+
+    if not path.is_file():
+        raise argparse.ArgumentTypeError(f"File not found: {arg_value}")
+
+    return path
+
+
 def decode_part(part: str) -> Any:
     """
     Receives a part of a JWT token (JSON encoded as a URL64 string), and returns the parsed JSON.
@@ -54,44 +63,29 @@ def decode(token: str) -> None:
     cli.print(signature_url64)
 
 
-@dataclass
-class Arguments:
-    file  : Path | None
-    token : str  | None
-
-
-def parse_args() -> Arguments:
+def parse_args() -> str:
     parser = argparse.ArgumentParser(description="Decode a JWT token and display its parts.")
 
-    parser.add_argument("-f", "--file", type=Path, help="Path to the token file.")
-    parser.add_argument("-t", "--token", type=str, help="The token string.")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-f", "--file", type=check_file, help="Path to the token file.")
+    group.add_argument("-t", "--token", type=str, help="The token string.")
 
     args = parser.parse_args()
-    file: Path | None = args.file
-    token: str | None = args.token
 
-    if file is not None:
-        assert token is None, "Only one of --file or --token should be provided; found both."
-        assert file.is_file(), f"--file should receive an existing file; found: {file}"
-        return Arguments(file=file, token=None)
-    elif token is not None:
-        assert len(token) > 0, "--token should receive a non-empty string."
-        return Arguments(file=None, token=token)
+    if args.file is not None:
+        assert args.token is None
+
+        with open(args.file, "r") as file_handle:
+            token = file_handle.read().strip()
+
+        return token
     else:
-        parser.print_help()
-        exit(1)
+        assert args.token is not None
+        return args.token
 
 
 def main() -> None:
-    args = parse_args()
-
-    if args.file is not None:
-        with open(args.file, "r") as handle:
-            token = handle.read().strip()
-    else:
-        assert args.token is not None
-        token = args.token.strip()
-
+    token = parse_args()
     decode(token)
 
 
