@@ -1,0 +1,16 @@
+[project]
+name = "tis-v2-cli"
+version = "0.1.0"
+description = "Access the TOPMed Imputation Server programmatically."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "mff-pretty-cli>=0.2.1",
+    "requests>=2.32.4",
+]
+
+[tool.uv]
+package = true
+
+[tool.setuptools]
+package-dir = {"local" = "local"}

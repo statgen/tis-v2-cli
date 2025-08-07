@@ -1,0 +1,7 @@
+.venv
+uv.lock
+__pycache__
+*egg-info*
+
+data/
+scratch/
