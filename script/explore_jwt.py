@@ -4,21 +4,11 @@
 import base64
 import json
 import argparse
-from pathlib import Path
-
 from typing import Any
-from dataclasses import dataclass
 
 from pretty_cli import PrettyCli
 
-
-def check_file(arg_value: str) -> Path:
-    path = Path(arg_value)
-
-    if not path.is_file():
-        raise argparse.ArgumentTypeError(f"File not found: {arg_value}")
-
-    return path
+from local.util import check_file
 
 
 def decode_part(part: str) -> Any:

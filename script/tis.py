@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pretty_cli import PrettyCli
 
 from local.api import TisV2Api
-from local.request_schema import JobParams, RefPanel, Build, Phasing, Mode
+from local.request_schema import JobParams, Build, Phasing, Mode
 from local.util import display, check_file, late_check_refpanel
 
 
