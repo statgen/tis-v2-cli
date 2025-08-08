@@ -45,7 +45,7 @@ class MessageInfo:
     def from_json(data) -> "MessageInfo":
         return MessageInfo(
             success = bool(data["success"]),
-            message = _str_or_none(data["message"]),
+            message = _str_or_none(data, "message"),
             type    = MessageType(data["type"]),
             time    = _db_timestamp_to_datetime(data["time"]),
         )
@@ -61,7 +61,7 @@ class StepInfo:
     def from_json(data) -> "StepInfo":
         return StepInfo(
             id           = int(data["id"]),
-            name         = _str_or_none(data["name"]),
+            name         = _str_or_none(data, "name"),
             log_messages = _process_list(data["logMessages"], MessageInfo.from_json),
         )
 
@@ -78,10 +78,10 @@ class TreeItemInfo:
     @staticmethod
     def from_json(data) -> "TreeItemInfo":
         return TreeItemInfo(
-            name   = _str_or_none(data["name"]),
-            path   = _str_or_none(data["path"]),
-            hash   = _str_or_none(data["hash"]),
-            size   = _str_or_none(data["size"]),
+            name   = _str_or_none(data, "name"),
+            path   = _str_or_none(data, "path"),
+            hash   = _str_or_none(data, "hash"),
+            size   = _str_or_none(data, "size"),
             folder = bool(data["folder"]),
             children = _process_list(data["childs"], TreeItemInfo.from_json),
         )
@@ -100,11 +100,11 @@ class DownloadInfo:
     @staticmethod
     def from_json(data) -> "DownloadInfo":
         return DownloadInfo(
-            name         = _str_or_none(data["name"]),
-            path         = _str_or_none(data["path"]),
-            hash         = _str_or_none(data["hash"]),
-            size         = _str_or_none(data["size"]),
-            user         = _str_or_none(data["user"]),
+            name         = _str_or_none(data, "name"),
+            path         = _str_or_none(data, "path"),
+            hash         = _str_or_none(data, "hash"),
+            size         = _str_or_none(data, "size"),
+            user         = _str_or_none(data, "user"),
             count        = int(data["count"]),
             parameter_id = int(data["parameterId"]),
         )
@@ -128,11 +128,11 @@ class OutputInfo:
     def from_json(data) -> "OutputInfo":
         return OutputInfo(
             id           = int(data["id"]),
-            description  = _str_or_none(data["description"]),
-            value        = _str_or_none(data["value"      ]),
-            name         = _str_or_none(data["name"       ]),
+            description  = _str_or_none(data, "description"),
+            value        = _str_or_none(data, "value"      ),
+            name         = _str_or_none(data, "name"       ),
             job_id       = _str_required(data["jobId"     ]),
-            hash         = _str_or_none(data["hash"       ]),
+            hash         = _str_or_none(data, "hash"       ),
             type         = OutputType(data["type"]) if data["type"] is not None else None,
             download     = bool(data["download"   ]),
             auto_export  = bool(data["autoExport"]),
@@ -164,15 +164,15 @@ class JobInfo:
     @staticmethod
     def from_json(data) -> "JobInfo":
         return JobInfo(
-            application       = _str_required(data["application"   ]),
-            application_id    = _str_required(data["applicationId" ]),
-            id                = _str_required(data["id"            ]),
-            name              = _str_or_none(data["name"           ]),
-            logs              = _str_or_none(data["logs"           ]),
+            application       = _str_required(data["application"  ]),
+            application_id    = _str_required(data["applicationId"]),
+            id                = _str_required(data["id"           ]),
+            name              = _str_or_none(data, "name"          ),
+            logs              = _str_or_none(data, "logs"          ),
             position_in_queue = None if (data["positionInQueue"] == -1) else int(data["positionInQueue"]),
-            user_agent        = _str_or_none(data["userAgent"      ]),
-            username          = _str_or_none(data["username"       ]),
-            workspace_size    = _str_or_none(data["workspaceSize"  ]),
+            user_agent        = _str_or_none(data, "userAgent"     ),
+            username          = _str_or_none(data, "username"      ),
+            workspace_size    = _str_or_none(data, "workspaceSize" ),
             submitted_on      = _db_timestamp_to_datetime(data["submittedOn"]),
             start_time        = _db_timestamp_to_datetime(data["startTime"  ]),
             end_time          = _db_timestamp_to_datetime(data["endTime"    ]),
@@ -188,18 +188,26 @@ class JobInfo:
 class JobSubmitted:
     success : bool
     message : str
-    id      : str
+    id      : str | None
 
     @staticmethod
     def from_json(data) -> "JobSubmitted":
         return JobSubmitted(
             success = bool(data["success"]),
             message = _str_required(data["message"]),
-            id      = _str_required(data["id"]),
+            id      = _str_or_none(data, "id"),
         )
 
 
-def _str_or_none(field) -> str | None:
+def _str_or_none(d: dict, k: str) -> str | None:
+    if (d is None) or (k is None):
+        return None
+
+    if not k in d:
+        return None
+
+    field = d[k]
+
     if field is None:
         return None
 

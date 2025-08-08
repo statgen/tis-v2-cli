@@ -149,7 +149,7 @@ def main() -> None:
                 assert isinstance(args, SubmitJobArgs)
                 response = api.submit_job(args.job_params)
                 if not args.global_args.minimal_output:
-                    cli.print(response)
+                    display(cli, response)
 
 
 if __name__ == "__main__":
