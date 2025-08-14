@@ -41,7 +41,7 @@ class JobParams:
       expected by the `files` parameter in `requests.post()`.
     """
     refpanel   : RefPanel
-    file       : PathLike
+    files      : list[PathLike]
     build      : Build
     r2_filter  : float
     phasing    : Phasing
@@ -49,17 +49,20 @@ class JobParams:
     mode       : Mode
     job_name   : str | None = None
 
-    def get_params(self) -> dict:
-        return {
+    def get_params(self) -> list[tuple[str, tuple]]:
+        params = [
             # header        file  value
-            "job-name"   : (None, self.job_name      ),
-            "refpanel"   : (None, str(self.refpanel) ),
-            "build"      : (None, str(self.build)    ),
-            "r2Filter"   : (None, str(self.r2_filter)),
-            "phasing"    : (None, str(self.phasing)  ),
-            "population" : (None, self.population    ),
-            "mode"       : (None, str(self.mode)     ),
-            "check1"     : (None, "accepted"         ),
-            "check2"     : (None, "accepted"         ),
-            "files"      : open(self.file, "rb"),
-        }
+            ("job-name"  , (None, self.job_name      )),
+            ("refpanel"  , (None, str(self.refpanel) )),
+            ("build"     , (None, str(self.build)    )),
+            ("r2Filter"  , (None, str(self.r2_filter))),
+            ("phasing"   , (None, str(self.phasing)  )),
+            ("population", (None, self.population    )),
+            ("mode"      , (None, str(self.mode)     )),
+            ("check1"    , (None, "accepted"         )),
+            ("check2"    , (None, "accepted"         )),
+        ]
+
+        params += [ ("files", (str(file), open(file, "rb"), "application/octet-stream")) for file in self.files ]
+
+        return params

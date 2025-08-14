@@ -73,7 +73,7 @@ def parse_arguments() -> Args:
     submit_job.add_argument("-p", "--phasing", help="Phasing engine to use.", type=Phasing, default=Phasing.EAGLE)
     submit_job.add_argument("-P", "--population", help="Reference population used for the allele frequency check", type=str, default=None)
     submit_job.add_argument("-m", "--mode", help="Run QC only, or do QC + Imputation.", type=Mode, default=Mode.IMPUTATION)
-    submit_job.add_argument("-f", "--file", help="VCF file to upload for testing.", type=check_file, required=True)
+    submit_job.add_argument("-f", "--file", help="VCF file to upload for testing. Repeat for a multi-file upload.", type=check_file, required=True, action="append")
 
     args = parser.parse_args()
 
@@ -103,7 +103,7 @@ def parse_arguments() -> Args:
             phasing    = args.phasing,
             population = args.population,
             mode       = args.mode,
-            file       = args.file,
+            files      = args.file,
         )
         return SubmitJobArgs(global_args=global_args, job_params=job_params)
 

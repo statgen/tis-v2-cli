@@ -187,7 +187,7 @@ class JobInfo:
 @dataclass
 class JobSubmitted:
     success : bool
-    message : str
+    message : str | None
     id      : str | None
 
     @staticmethod
@@ -197,6 +197,10 @@ class JobSubmitted:
             message = _str_required(data["message"]),
             id      = _str_or_none(data, "id"),
         )
+
+    @staticmethod
+    def fail() -> "JobSubmitted":
+        return JobSubmitted(success=False, message=None, id=None)
 
 
 def _str_or_none(d: dict, k: str) -> str | None:

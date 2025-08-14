@@ -3,9 +3,11 @@ Provides `TisV2Api`, a class to call the TOPMed Imputation Server endpoints (eit
 """
 
 
-import requests
 from pathlib import Path
 
+import requests
+from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+from tqdm import tqdm
 from pretty_cli import PrettyCli
 
 from local import ansi_colors
@@ -83,7 +85,7 @@ class TisV2Api:
 
         self.headers = { "X-Auth-Token": self.access_token }
 
-    def _request(self, method: str, url: str, **kwargs) -> requests.Response:
+    def _request(self, method: str, url: str, monitor_progress: bool = False, **kwargs) -> requests.Response:
         """
         Internal method used to handle all requests.
 
@@ -97,7 +99,38 @@ class TisV2Api:
         self.cli.blank()
         self.cli.print(f"{ansi_colors.FG_YELLOW}[{method} {url}]{ansi_colors.RESET}", end=" ")
 
-        response = requests.request(method=method, url=self.base_url + url, headers=self.headers, **kwargs)
+        if (monitor_progress) and ("files" in kwargs):
+            total_size = 0
+            fields: list[tuple[str, tuple]] = kwargs["files"]
+            assert isinstance(fields, list)
+            del kwargs["files"]
+
+            if "data" in kwargs:
+                assert not kwargs["data"]
+                del kwargs["data"]
+
+            for field_name, field_data in fields:
+                if field_name == "files":
+                    (file_name, _, _) = field_data
+                    assert isinstance(file_name, str)
+                    p = Path(file_name)
+                    total_size += p.stat().st_size
+
+            assert total_size > 0
+
+            with tqdm(desc="Upload", total=total_size, unit="B", unit_scale=True, unit_divisor=1024) as bar:
+                def callback(monitor: MultipartEncoderMonitor) -> None:
+                    new_bytes = monitor.bytes_read - bar.n
+                    bar.update(new_bytes)
+
+                e = MultipartEncoder(fields=fields)
+                m = MultipartEncoderMonitor(e, callback)
+
+                headers = self.headers | { "Content-Type": m.content_type }
+                response = requests.request(method=method, url=self.base_url + url, headers=headers, data=m, **kwargs)
+
+        else:
+            response = requests.request(method=method, url=self.base_url + url, headers=self.headers, **kwargs)
 
         color = ansi_colors.FG_GREEN if (response.status_code == 200) else ansi_colors.FG_RED
         self.cli.print(f"{color}{response.status_code}{ansi_colors.RESET}")
@@ -120,13 +153,13 @@ class TisV2Api:
         """self._request() wrapper for all internal GET calls."""
         return self._request(method="GET", url=url, params=params)
 
-    def _post(self, url: str, data=None, json=None, **kwargs) -> requests.Response:
+    def _post(self, url: str, data = None, json = None, monitor_progress: bool = False, **kwargs) -> requests.Response:
         """self._request() wrapper for all internal POST calls."""
-        return self._request(method="POST", url=url, data=data, json=json, **kwargs)
+        return self._request(method="POST", url=url, data=data, json=json, monitor_progress=monitor_progress, **kwargs)
 
     def list_jobs(self) -> list[JobInfo]:
         """Lists all jobs submitted by the current user (regardless of current status)."""
-        response = self._get("jobs")
+        response = self._get(url="jobs")
 
         if response.status_code != 200:
             return []
@@ -138,11 +171,16 @@ class TisV2Api:
 
     def get_job(self, id: str) -> JobInfo:
         """Gets detailed information about the requested job."""
-        response = self._get(f"jobs/{id}")
+        response = self._get(url=f"jobs/{id}")
         job_json = response.json()
         return JobInfo.from_json(job_json)
 
     def submit_job(self, params: JobParams) -> JobSubmitted:
         """Submits a job for processing."""
-        response = self._post("/jobs/submit/imputationserver2", files=params.get_params())
-        return JobSubmitted.from_json(response.json())
+        response = self._post(url="/jobs/submit/imputationserver2", files=params.get_params())
+        # response = self._post(url="/jobs/submit/imputationserver2", files=params.get_params(), monitor_progress=True)
+
+        try:
+            return JobSubmitted.from_json(response.json())
+        except:
+            return JobSubmitted.fail()
