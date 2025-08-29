@@ -14,39 +14,64 @@ from local.util import display, check_file, late_check_refpanel
 
 
 class Command(StrEnum):
-    LIST_JOBS  = "list-jobs"
-    GET_JOB    = "get-job"
-    SUBMIT_JOB = "submit-job"
+    LIST_JOBS   = "list-jobs"
+    GET_JOB     = "get-job"
+    SUBMIT_JOB  = "submit-job"
+    RESTART_JOB = "restart-job"
 
 
 @dataclass
-class GlobalArgs:
+class Args:
     env            : str
     debug          : bool
     repeat         : int
     delay          : float
     minimal_output : bool
+    token_file     : Path | None
     command        : Command
 
-
-@dataclass
-class ListJobsArgs:
-    global_args : GlobalArgs
+    def run_command(self, api: TisV2Api) -> None:
+        raise NotImplementedError()
 
 
 @dataclass
-class GetJobArgs:
-    global_args : GlobalArgs
-    job_id      : str
+class ListJobsArgs(Args):
+    def run_command(self, api: TisV2Api) -> None:
+        jobs = api.list_jobs()
+
+        if not self.minimal_output:
+            for job in jobs:
+                display(api.cli, job)
 
 
 @dataclass
-class SubmitJobArgs:
-    global_args : GlobalArgs
-    job_params  : JobParams
+class GetJobArgs(Args):
+    job_id: str
+
+    def run_command(self, api: TisV2Api) -> None:
+        job = api.get_job(self.job_id)
+        if not self.minimal_output:
+            display(api.cli, job)
 
 
-Args = ListJobsArgs | GetJobArgs | SubmitJobArgs
+@dataclass
+class RestartJobArgs(Args):
+    job_id: str
+
+    def run_command(self, api: TisV2Api) -> None:
+        response = api.restart_job(self.job_id)
+        if not self.minimal_output:
+            display(api.cli, response)
+
+
+@dataclass
+class SubmitJobArgs(Args):
+    job_params: JobParams
+
+    def run_command(self, api: TisV2Api) -> None:
+        response = api.submit_job(self.job_params)
+        if not self.minimal_output:
+            display(api.cli, response)
 
 
 def parse_arguments() -> Args:
@@ -65,6 +90,9 @@ def parse_arguments() -> Args:
     get_job = subparsers.add_parser(Command.GET_JOB, help="Get one of the user's jobs, by ID.")
     get_job.add_argument("job_id", help="ID of the job to retrieve")
 
+    restart_job = subparsers.add_parser(Command.RESTART_JOB, help="Restart one of the user's jobs, by ID.")
+    restart_job.add_argument("job_id", help="ID of the job to retry")
+
     submit_job = subparsers.add_parser(Command.SUBMIT_JOB, help="Submit a job for processing.")
     submit_job.add_argument("-n", "--name", help="Optional name for this job (will be assigned a unique ID regardless).")
     submit_job.add_argument("-r", "--refpanel", help="Reference panel used for imputation.", type=str, required=True)
@@ -76,36 +104,39 @@ def parse_arguments() -> Args:
     submit_job.add_argument("-f", "--file", help="VCF file to upload for testing. Repeat for a multi-file upload.", type=check_file, required=True, action="append")
 
     args = parser.parse_args()
+    command = Command(args.command)
 
-    global_args = GlobalArgs(
-        env            = args.env,
-        debug          = args.debug,
-        repeat         = args.repeat,
-        delay          = args.delay,
-        minimal_output = args.minimal_output,
-        command        = Command(args.command),
-    )
+    global_args = {
+        "env"            : args.env,
+        "debug"          : args.debug,
+        "repeat"         : args.repeat,
+        "delay"          : args.delay,
+        "minimal_output" : args.minimal_output,
+        "token_file"     : args.token_file,
+        "command"        : command,
+    }
 
-    if global_args.command == Command.LIST_JOBS:
-        return ListJobsArgs(global_args=global_args)
+    match command:
+        case Command.LIST_JOBS:
+            return ListJobsArgs(**global_args)
+        case Command.GET_JOB:
+            return GetJobArgs(**global_args, job_id=args.job_id)
+        case Command.RESTART_JOB:
+            return RestartJobArgs(**global_args, job_id=args.job_id)
+        case Command.SUBMIT_JOB:
+            refpanel = late_check_refpanel(submit_job, args.env, args.refpanel)
 
-    elif global_args.command == Command.GET_JOB:
-        return GetJobArgs(global_args=global_args, job_id=args.job_id)
-
-    elif global_args.command == Command.SUBMIT_JOB:
-        refpanel = late_check_refpanel(submit_job, global_args.env, args.refpanel)
-
-        job_params = JobParams(
-            job_name   = args.name,
-            refpanel   = refpanel,
-            build      = args.build,
-            r2_filter  = args.r2_filter,
-            phasing    = args.phasing,
-            population = args.population,
-            mode       = args.mode,
-            files      = args.file,
-        )
-        return SubmitJobArgs(global_args=global_args, job_params=job_params)
+            job_params = JobParams(
+                job_name   = args.name,
+                refpanel   = refpanel,
+                build      = args.build,
+                r2_filter  = args.r2_filter,
+                phasing    = args.phasing,
+                population = args.population,
+                mode       = args.mode,
+                files      = args.file,
+            )
+            return SubmitJobArgs(**global_args, job_params=job_params)
 
     assert False, "UNREACHABLE"
 
@@ -117,39 +148,21 @@ def main() -> None:
     api = TisV2Api(
         env = "dev",
         cli = cli  ,
-        print_request_headers  = args.global_args.debug,
-        print_request_body     = args.global_args.debug,
-        print_response_headers = args.global_args.debug,
-        print_response_body    = args.global_args.debug,
+        print_request_headers  = args.debug,
+        print_request_body     = args.debug,
+        print_response_headers = args.debug,
+        print_response_body    = args.debug,
+        token_file             = args.token_file,
     )
 
-    if args.global_args.repeat < 1:
+    if args.repeat < 1:
         return
 
-    for _ in range(args.global_args.repeat):
-        if args.global_args.delay > 0:
-            time.sleep(args.global_args.delay)
+    for _ in range(args.repeat):
+        if args.delay > 0:
+            time.sleep(args.delay)
 
-        match args.global_args.command:
-            case Command.LIST_JOBS:
-                assert isinstance(args, ListJobsArgs)
-                jobs = api.list_jobs()
-
-                if not args.global_args.minimal_output:
-                    for job in jobs:
-                        display(cli, job)
-
-            case Command.GET_JOB:
-                assert isinstance(args, GetJobArgs)
-                job = api.get_job(args.job_id)
-                if not args.global_args.minimal_output:
-                    display(cli, job)
-
-            case Command.SUBMIT_JOB:
-                assert isinstance(args, SubmitJobArgs)
-                response = api.submit_job(args.job_params)
-                if not args.global_args.minimal_output:
-                    display(cli, response)
+        args.run_command(api)
 
 
 if __name__ == "__main__":

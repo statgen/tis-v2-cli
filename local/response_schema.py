@@ -203,6 +203,19 @@ class JobSubmitted:
         return JobSubmitted(success=False, message=None, id=None)
 
 
+@dataclass
+class JobRestarted:
+    success : bool
+    message : str
+
+    @staticmethod
+    def from_json(data) -> "JobRestarted":
+        return JobRestarted(
+            success = bool(data["success"]),
+            message = _str_required(data["message"]),
+        )
+
+
 def _str_or_none(d: dict, k: str) -> str | None:
     if (d is None) or (k is None):
         return None

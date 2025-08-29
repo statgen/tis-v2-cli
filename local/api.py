@@ -12,7 +12,7 @@ from pretty_cli import PrettyCli
 
 from local import ansi_colors
 from local.request_schema import JobParams
-from local.response_schema import JobInfo, JobSubmitted
+from local.response_schema import JobInfo, JobSubmitted, JobRestarted
 
 
 BASE_URL = {
@@ -184,3 +184,7 @@ class TisV2Api:
             return JobSubmitted.from_json(response.json())
         except:
             return JobSubmitted.fail()
+
+    def restart_job(self, id: str) -> JobRestarted:
+        response = self._get(url=f"jobs/{id}/restart")
+        return JobRestarted.from_json(response.json())
