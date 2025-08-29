@@ -3,6 +3,7 @@
 
 import argparse
 import time
+from pathlib import Path
 from enum import StrEnum
 from dataclasses import dataclass
 
@@ -82,6 +83,7 @@ def parse_arguments() -> Args:
     parser.add_argument("--repeat", help="Number of times to repeat the requested call.", type=int, default=1)
     parser.add_argument("--delay", help="Time in seconds to wait before performing the call.", type=float, default=0.0)
     parser.add_argument("--minimal-output", help="Only print the request-response header, supressing normal output.", action="store_true")
+    parser.add_argument("--token-file", help="Path to a text file containing the authentication token.", type=check_file, default=None)
 
     subparsers = parser.add_subparsers(title="Commands", dest="command")
 

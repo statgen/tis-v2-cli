@@ -21,14 +21,17 @@ BASE_URL = {
 }
 
 
-def _get_token(env: str) -> str:
+def _get_token(env: str, token_file: Path | None) -> str:
     assert env in [ "dev", "prod" ]
 
-    data_dir = Path("data/")
-    assert data_dir.is_dir()
+    if token_file is not None:
+        assert token_file.is_file(), f"Expected to find provided token file: {token_file}"
+    else:
+        data_dir = Path("data/")
+        assert data_dir.is_dir()
 
-    token_file = data_dir / f"{env}.token"
-    assert token_file.is_file(), f"Expected to find token file: {token_file}"
+        token_file = data_dir / f"{env}.token"
+        assert token_file.is_file(), f"Expected to find default token file: {token_file}"
 
     with open(token_file, "r") as file_handle:
         token = file_handle.read().strip()
@@ -64,12 +67,13 @@ class TisV2Api:
     print_response_body    : bool
 
     def __init__(self,
-        env                    : str                    ,
-        cli                    : PrettyCli = PrettyCli(),
-        print_response_body    : bool      = False      ,
-        print_request_headers  : bool      = False      ,
-        print_request_body     : bool      = False      ,
-        print_response_headers : bool      = False      ,
+        env                    : str                      ,
+        cli                    : PrettyCli   = PrettyCli(),
+        print_response_body    : bool        = False      ,
+        print_request_headers  : bool        = False      ,
+        print_request_body     : bool        = False      ,
+        print_response_headers : bool        = False      ,
+        token_file             : Path | None = None       ,
     ) -> None:
         assert env in [ "dev", "prod" ]
         self.env = env
@@ -81,7 +85,7 @@ class TisV2Api:
         self.print_response_body    = print_response_body
 
         self.base_url = BASE_URL[env] + "/api/v2"
-        self.access_token = _get_token(env)
+        self.access_token = _get_token(env, token_file)
 
         self.headers = { "X-Auth-Token": self.access_token }
 

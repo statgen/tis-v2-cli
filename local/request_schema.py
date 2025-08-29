@@ -63,6 +63,7 @@ class JobParams:
             ("check2"    , (None, "accepted"         )),
         ]
 
+        #            header    name       data              MIME-type
         params += [ ("files", (str(file), open(file, "rb"), "application/octet-stream")) for file in self.files ]
 
         return params
