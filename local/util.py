@@ -1,5 +1,6 @@
 import argparse
 from typing import Callable
+from datetime import timedelta
 from dataclasses import asdict
 from pathlib import Path
 
@@ -42,6 +43,31 @@ def check_file(arg_value: str) -> Path:
         raise argparse.ArgumentTypeError(f"File not found: {arg_value}")
 
     return path
+
+
+def check_timedelta(arg_value: str) -> timedelta:
+    """
+    Argparse helper. Converts an argument of shape `((hh:)mm:)ss` to a `timedelta` time amount expression.
+    """
+
+    try:
+        parts = [ int(x) for x in arg_value.split(":") ]
+        assert(1 <= len(parts) <= 3)
+
+        if len(parts) == 1:
+            h, m = 0, 0
+            s = parts[0]
+        elif len(parts) == 2:
+            h = 0
+            m, s = parts
+        else:
+            h, m, s = parts
+
+        t = timedelta(hours=h, minutes=m, seconds=s)
+    except:
+        raise argparse.ArgumentTypeError(f"Invalid time expression; expected ((hh:)mm:)ss but found: {arg_value}")
+
+    return t
 
 
 REFPANEL_LOOKUP = {
