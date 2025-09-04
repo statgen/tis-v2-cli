@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pretty_cli import PrettyCli
 
 from local.api import TisV2Api
-from local.request_schema import JobParams, Build, Phasing, Mode
+from local.request_schema import JobParams, Build, Phasing, Mode, AdminListJobsState
 from local.response_schema import JobInfo
 from local.util import display, check_file, late_check_refpanel, check_datetime
 
@@ -21,6 +21,11 @@ class Command(StrEnum):
     GET_JOB     = "get-job"
     SUBMIT_JOB  = "submit-job"
     RESTART_JOB = "restart-job"
+    ADMIN       = "admin"
+
+
+class AdminCommand(StrEnum):
+    LIST_JOBS = "list-jobs"
 
 
 @dataclass
@@ -95,6 +100,24 @@ class SubmitJobArgs(Args):
             display(api.cli, response)
 
 
+@dataclass
+class AdminArgs(Args):
+    admin_command: AdminCommand
+
+
+@dataclass
+class AdminListJobs(AdminArgs):
+    state: AdminListJobsState
+
+    def run_command(self, api: TisV2Api) -> None:
+        jobs = api.admin_list_jobs(self.state)
+
+        if not self.minimal_output:
+            for job in jobs:
+                display(api.cli, job)
+
+
+
 def parse_arguments() -> Args:
     parser = argparse.ArgumentParser(description="Query the TOPMed Imputation Server API")
 
@@ -126,6 +149,12 @@ def parse_arguments() -> Args:
     submit_job.add_argument("-P", "--population", help="Reference population used for the allele frequency check", type=str, default=None)
     submit_job.add_argument("-m", "--mode", help="Run QC only, or do QC + Imputation.", type=Mode, default=Mode.IMPUTATION)
     submit_job.add_argument("-f", "--file", help="VCF file to upload for testing. Repeat for a multi-file upload.", type=check_file, required=True, action="append")
+
+    admin = subparsers.add_parser(Command.ADMIN, help="Issue admin commands")
+    admin_parsers = admin.add_subparsers(title="Admin Commands", dest="admin_command")
+
+    admin_list_jobs = admin_parsers.add_parser(AdminCommand.LIST_JOBS, help="List jobs from all users")
+    admin_list_jobs.add_argument("state", help="Job state filter.", choices=[ state for state in AdminListJobsState ])
 
     args = parser.parse_args()
     command = Command(args.command)
@@ -162,7 +191,17 @@ def parse_arguments() -> Args:
             )
             return SubmitJobArgs(**global_args, job_params=job_params)
 
-    assert False, "UNREACHABLE"
+        case Command.ADMIN:
+            admin_command = AdminCommand(args.admin_command)
+            global_args["admin_command"] = admin_command
+
+            match admin_command:
+                case AdminCommand.LIST_JOBS:
+                    return AdminListJobs(**global_args, state=args.state)
+
+            assert False, f"Unrecognized admin command: {admin_command}"
+
+    assert False, f"Unrecognized command: {command}"
 
 
 def main() -> None:

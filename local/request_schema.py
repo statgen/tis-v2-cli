@@ -67,3 +67,10 @@ class JobParams:
         params += [ ("files", (str(file), open(file, "rb"), "application/octet-stream")) for file in self.files ]
 
         return params
+
+
+class AdminListJobsState(StrEnum):
+    LONG_TIME_QUEUE = "running-ltq"
+    # SHORT_TIME_QUEUE = "running-stq" # Looks deprecated
+    CURRENT = "current"
+    RETIRED = "retired"

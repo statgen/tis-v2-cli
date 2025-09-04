@@ -11,7 +11,7 @@ from tqdm import tqdm
 from pretty_cli import PrettyCli
 
 from local import ansi_colors
-from local.request_schema import JobParams
+from local.request_schema import JobParams, AdminListJobsState
 from local.response_schema import JobInfo, JobSubmitted, JobRestarted
 
 
@@ -192,3 +192,14 @@ class TisV2Api:
     def restart_job(self, id: str) -> JobRestarted:
         response = self._get(url=f"jobs/{id}/restart")
         return JobRestarted.from_json(response.json())
+
+    def admin_list_jobs(self, state: AdminListJobsState) -> list[JobInfo]:
+        response = self._get(url="admin/jobs", params={ "state": state })
+
+        if response.status_code != 200:
+            return []
+
+        json_data = response.json()["data"]
+        jobs = [ JobInfo.from_json(entry) for entry in json_data ]
+
+        return jobs
