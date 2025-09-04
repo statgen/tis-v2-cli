@@ -177,7 +177,7 @@ def parse_arguments() -> Args:
     admin_parsers = admin.add_subparsers(title="Admin Commands", dest="admin_command")
 
     admin_list_jobs = admin_parsers.add_parser(AdminCommand.LIST_JOBS, help="List jobs from all users.")
-    admin_list_jobs.add_argument("state", help="Job state filter.", choices=[ state for state in AdminListJobsState ], action="append")
+    admin_list_jobs.add_argument("--state", help="Job state filter.", choices=[ state for state in AdminListJobsState ], required=True, action="append")
 
     admin_kill_all = admin_parsers.add_parser(AdminCommand.KILL_ALL, help="Cancel all running or waiting jobs.")
 
