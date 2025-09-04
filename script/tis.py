@@ -3,6 +3,7 @@
 
 import argparse
 import time
+from datetime import datetime
 from pathlib import Path
 from enum import StrEnum
 from dataclasses import dataclass
@@ -11,7 +12,8 @@ from pretty_cli import PrettyCli
 
 from local.api import TisV2Api
 from local.request_schema import JobParams, Build, Phasing, Mode
-from local.util import display, check_file, late_check_refpanel
+from local.response_schema import JobInfo
+from local.util import display, check_file, late_check_refpanel, check_datetime
 
 
 class Command(StrEnum):
@@ -37,12 +39,30 @@ class Args:
 
 @dataclass
 class ListJobsArgs(Args):
+    start_time : datetime | None
+    end_time   : datetime | None
+
     def run_command(self, api: TisV2Api) -> None:
         jobs = api.list_jobs()
+        jobs = self.filter_jobs(jobs)
 
         if not self.minimal_output:
             for job in jobs:
                 display(api.cli, job)
+
+    def filter_jobs(self, jobs: list[JobInfo]) -> list[JobInfo]:
+        filtered = []
+
+        for j in jobs:
+            if self.start_time:
+                if j.end_time < self.start_time:
+                    continue
+            if self.end_time:
+                if j.start_time > self.end_time:
+                    continue
+            filtered.append(j)
+
+        return filtered
 
 
 @dataclass
@@ -88,6 +108,8 @@ def parse_arguments() -> Args:
     subparsers = parser.add_subparsers(title="Commands", dest="command")
 
     list_jobs = subparsers.add_parser(Command.LIST_JOBS, help="List all of the user's jobs.")
+    list_jobs.add_argument("--start-time", help="Only display results for jobs that were running after this time.", type=check_datetime, default=None)
+    list_jobs.add_argument("--end-time", help="Only display results for jobs that were running before this time.", type=check_datetime, default=None)
 
     get_job = subparsers.add_parser(Command.GET_JOB, help="Get one of the user's jobs, by ID.")
     get_job.add_argument("job_id", help="ID of the job to retrieve")
@@ -120,7 +142,7 @@ def parse_arguments() -> Args:
 
     match command:
         case Command.LIST_JOBS:
-            return ListJobsArgs(**global_args)
+            return ListJobsArgs(**global_args, start_time=args.start_time, end_time=args.end_time)
         case Command.GET_JOB:
             return GetJobArgs(**global_args, job_id=args.job_id)
         case Command.RESTART_JOB:

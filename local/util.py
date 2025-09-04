@@ -1,6 +1,5 @@
 import argparse
-from typing import Callable
-from datetime import timedelta
+from datetime import datetime, timedelta
 from dataclasses import asdict
 from pathlib import Path
 
@@ -68,6 +67,17 @@ def check_timedelta(arg_value: str) -> timedelta:
         raise argparse.ArgumentTypeError(f"Invalid time expression; expected ((hh:)mm:)ss but found: {arg_value}")
 
     return t
+
+
+def check_datetime(arg_value: str) -> datetime:
+    """
+    Argparse helper. Converts an ISO 8601 date-time expression to a `datetime` timestamp.
+    """
+
+    try:
+        return datetime.fromisoformat(arg_value)
+    except:
+        raise argparse.ArgumentTypeError(f"Expected ISO 8601 date-time, but found: {arg_value}")
 
 
 REFPANEL_LOOKUP = {
