@@ -57,10 +57,16 @@ class TisV2Api:
     ```
     The environnment is either `dev` or `prod`. It expects a token file named `<env>.token` (e.g., `dev.token`) to exist WHERE.
 
-    Available methods:
-    * `list_jobs()`: Lists all jobs submitted by the current user (regardless of current status).
+    User methods:
+    * `list_jobs()`: Lists all jobs visible by the current user (regardless of current status).
     * `get_job(id)`: Gets detailed information about the requested job.
     * `submit_job(params)`: Submits a job for processing.
+    * `cancel_job(id)`: Cancels the specified job.
+    * `restart_job(id)`: Retries the specified job.
+
+    Admin methods:
+    * `admin_list_jobs(states)`: Calls the admin job listing endpoint.
+    * `admin_kill_all()`: Cancels all running jobs.
     """
 
     env          : str
@@ -198,14 +204,17 @@ class TisV2Api:
             return JobResponse.fail()
 
     def cancel_job(self, id: str) -> JobInfo:
+        """Cancels the specified job."""
         response = self._get(url=f"jobs/{id}/cancel")
         return JobInfo.from_json(response.json())
 
     def restart_job(self, id: str) -> JobResponse:
+        """Retries the specified job (must be in a `DEAD` state)."""
         response = self._get(url=f"jobs/{id}/restart")
         return JobResponse.from_json(response.json())
 
     def admin_list_jobs(self, states: Iterable[AdminListJobsState]) -> list[JobInfo]:
+        """Calls the admin job listing endpoint. Requires at least one state filter to produce output (see `AdminListJobsState`). The access token must have admin rights."""
         jobs = []
 
         for state in states:
@@ -220,6 +229,7 @@ class TisV2Api:
         return jobs
 
     def admin_kill_all(self) -> AdminKillAllResponse:
+        """Cancels all running jobs. The access token must have admin rights."""
         killed = []
         failed = []
 

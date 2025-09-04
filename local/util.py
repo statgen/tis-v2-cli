@@ -80,15 +80,6 @@ def check_datetime(arg_value: str) -> datetime:
         raise argparse.ArgumentTypeError(f"Expected ISO 8601 date-time, but found: {arg_value}")
 
 
-# def check_admin_list_job_states(arg_value: str) -> list[AdminListJobsState]:
-#     try:
-#         states = [ AdminListJobsState(entry) for entry in arg_value.split(",") ]
-#         assert len(states) > 0
-#         return states
-#     except:
-#         raise argparse.ArgumentTypeError(f"Expected comma-separated list of admin list-job states with at least one entry (valid states: {[s for s in AdminListJobsState]}). Found: {arg_value}")
-
-
 REFPANEL_LOOKUP = {
     "dev": {
         "hapmap": RefPanel.DEV_HAPMAP_2,
@@ -106,6 +97,15 @@ REFPANEL_LOOKUP = {
 
 
 def late_check_refpanel(parser: argparse.ArgumentParser, env: str, refpanel: str) -> RefPanel:
+    """
+    Validates the `refpanel` argument based on the passed `env`; used for late argument parsing.
+
+    If the provided `refpanel` argument is a recognized alias for `hapmap-2`, `r3`, or `r3-prod`,
+    returns the corresponding `RefPanel` value. The comparison ignores case, spacing, dashes,
+    and underscores.
+
+    Otherwise, uses the `parser` to raise a "bad formatting" error and exit.
+    """
     assert env in REFPANEL_LOOKUP.keys()
 
     processed = refpanel.strip().lower().replace("-", "").replace("_", "")
