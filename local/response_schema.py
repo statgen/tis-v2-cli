@@ -185,35 +185,22 @@ class JobInfo:
 
 
 @dataclass
-class JobSubmitted:
+class JobResponse:
     success : bool
-    message : str | None
-    id      : str | None
+    message : str | None = None
+    id      : str | None = None
 
     @staticmethod
-    def from_json(data) -> "JobSubmitted":
-        return JobSubmitted(
+    def from_json(data) -> "JobResponse":
+        return JobResponse(
             success = bool(data["success"]),
             message = _str_required(data["message"]),
             id      = _str_or_none(data, "id"),
         )
 
     @staticmethod
-    def fail() -> "JobSubmitted":
-        return JobSubmitted(success=False, message=None, id=None)
-
-
-@dataclass
-class JobRestarted:
-    success : bool
-    message : str
-
-    @staticmethod
-    def from_json(data) -> "JobRestarted":
-        return JobRestarted(
-            success = bool(data["success"]),
-            message = _str_required(data["message"]),
-        )
+    def fail() -> "JobResponse":
+        return JobResponse(success=False, message=None, id=None)
 
 
 def _str_or_none(d: dict, k: str) -> str | None:

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pretty_cli import PrettyCli
 
-from local.request_schema import RefPanel
+from local.request_schema import RefPanel, AdminListJobsState
 
 
 def display(cli: PrettyCli, obj) -> None:
@@ -78,6 +78,15 @@ def check_datetime(arg_value: str) -> datetime:
         return datetime.fromisoformat(arg_value)
     except:
         raise argparse.ArgumentTypeError(f"Expected ISO 8601 date-time, but found: {arg_value}")
+
+
+# def check_admin_list_job_states(arg_value: str) -> list[AdminListJobsState]:
+#     try:
+#         states = [ AdminListJobsState(entry) for entry in arg_value.split(",") ]
+#         assert len(states) > 0
+#         return states
+#     except:
+#         raise argparse.ArgumentTypeError(f"Expected comma-separated list of admin list-job states with at least one entry (valid states: {[s for s in AdminListJobsState]}). Found: {arg_value}")
 
 
 REFPANEL_LOOKUP = {

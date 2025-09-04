@@ -4,6 +4,8 @@ Provides `TisV2Api`, a class to call the TOPMed Imputation Server endpoints (eit
 
 
 from pathlib import Path
+from dataclasses import dataclass
+from typing import Iterable
 
 import requests
 from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
@@ -12,7 +14,7 @@ from pretty_cli import PrettyCli
 
 from local import ansi_colors
 from local.request_schema import JobParams, AdminListJobsState
-from local.response_schema import JobInfo, JobSubmitted, JobRestarted
+from local.response_schema import JobInfo, JobResponse, JobState
 
 
 BASE_URL = {
@@ -37,6 +39,12 @@ def _get_token(env: str, token_file: Path | None) -> str:
         token = file_handle.read().strip()
 
     return token
+
+
+@dataclass
+class AdminKillAllResponse:
+    killed : list[JobResponse]
+    failed : list[JobResponse]
 
 
 class TisV2Api:
@@ -179,27 +187,54 @@ class TisV2Api:
         job_json = response.json()
         return JobInfo.from_json(job_json)
 
-    def submit_job(self, params: JobParams) -> JobSubmitted:
+    def submit_job(self, params: JobParams) -> JobResponse:
         """Submits a job for processing."""
         response = self._post(url="/jobs/submit/imputationserver2", files=params.get_params())
         # response = self._post(url="/jobs/submit/imputationserver2", files=params.get_params(), monitor_progress=True)
 
         try:
-            return JobSubmitted.from_json(response.json())
+            return JobResponse.from_json(response.json())
         except:
-            return JobSubmitted.fail()
+            return JobResponse.fail()
 
-    def restart_job(self, id: str) -> JobRestarted:
+    def cancel_job(self, id: str) -> JobInfo:
+        response = self._get(url=f"jobs/{id}/cancel")
+        return JobInfo.from_json(response.json())
+
+    def restart_job(self, id: str) -> JobResponse:
         response = self._get(url=f"jobs/{id}/restart")
-        return JobRestarted.from_json(response.json())
+        return JobResponse.from_json(response.json())
 
-    def admin_list_jobs(self, state: AdminListJobsState) -> list[JobInfo]:
-        response = self._get(url="admin/jobs", params={ "state": state })
+    def admin_list_jobs(self, states: Iterable[AdminListJobsState]) -> list[JobInfo]:
+        jobs = []
 
-        if response.status_code != 200:
-            return []
+        for state in states:
+            response = self._get(url="admin/jobs", params={ "state": state })
 
-        json_data = response.json()["data"]
-        jobs = [ JobInfo.from_json(entry) for entry in json_data ]
+            if response.status_code != 200:
+                return []
+
+            json_data = response.json()["data"]
+            jobs += [ JobInfo.from_json(entry) for entry in json_data ]
 
         return jobs
+
+    def admin_kill_all(self) -> AdminKillAllResponse:
+        killed = []
+        failed = []
+
+        all_list_states = [ s for s in AdminListJobsState ]
+        cancelable_job_states = [ JobState.RUNNING, JobState.WAITING, JobState.EXPORTING ]
+
+        for job in self.admin_list_jobs(states=all_list_states):
+            if job.state not in cancelable_job_states:
+                continue
+
+            response = self.cancel_job(id=job.id)
+
+            if response.state == JobState.CANCELED:
+                killed.append(job.id)
+            else:
+                failed.append(job.id)
+
+        return AdminKillAllResponse(killed, failed)

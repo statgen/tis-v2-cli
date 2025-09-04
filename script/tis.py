@@ -20,12 +20,14 @@ class Command(StrEnum):
     LIST_JOBS   = "list-jobs"
     GET_JOB     = "get-job"
     SUBMIT_JOB  = "submit-job"
+    CANCEL_JOB  = "cancel-job"
     RESTART_JOB = "restart-job"
     ADMIN       = "admin"
 
 
 class AdminCommand(StrEnum):
     LIST_JOBS = "list-jobs"
+    KILL_ALL  = "kill-all"
 
 
 @dataclass
@@ -81,6 +83,16 @@ class GetJobArgs(Args):
 
 
 @dataclass
+class CancelJobArgs(Args):
+    job_id: str
+
+    def run_command(self, api: TisV2Api) -> None:
+        job = api.cancel_job(self.job_id)
+        if not self.minimal_output:
+            display(api.cli, job)
+
+
+@dataclass
 class RestartJobArgs(Args):
     job_id: str
 
@@ -107,15 +119,23 @@ class AdminArgs(Args):
 
 @dataclass
 class AdminListJobs(AdminArgs):
-    state: AdminListJobsState
+    states: list[AdminListJobsState]
 
     def run_command(self, api: TisV2Api) -> None:
-        jobs = api.admin_list_jobs(self.state)
+        jobs = api.admin_list_jobs(self.states)
 
         if not self.minimal_output:
             for job in jobs:
                 display(api.cli, job)
 
+
+@dataclass
+class AdminKillAll(AdminArgs):
+    def run_command(self, api: TisV2Api) -> None:
+        response = api.admin_kill_all()
+
+        if not self.minimal_output:
+            display(api.cli, response)
 
 
 def parse_arguments() -> Args:
@@ -134,10 +154,13 @@ def parse_arguments() -> Args:
     list_jobs.add_argument("--start-time", help="Only display results for jobs that were running after this time.", type=check_datetime, default=None)
     list_jobs.add_argument("--end-time", help="Only display results for jobs that were running before this time.", type=check_datetime, default=None)
 
-    get_job = subparsers.add_parser(Command.GET_JOB, help="Get one of the user's jobs, by ID.")
+    get_job = subparsers.add_parser(Command.GET_JOB, help="Get one job visible by the user, by ID.")
     get_job.add_argument("job_id", help="ID of the job to retrieve")
 
-    restart_job = subparsers.add_parser(Command.RESTART_JOB, help="Restart one of the user's jobs, by ID.")
+    cancel_job = subparsers.add_parser(Command.CANCEL_JOB, help="Cancel one job visible by the user, by ID.")
+    cancel_job.add_argument("job_id", help="ID of the job to cancel")
+
+    restart_job = subparsers.add_parser(Command.RESTART_JOB, help="Restart one job visible by the user, by ID.")
     restart_job.add_argument("job_id", help="ID of the job to retry")
 
     submit_job = subparsers.add_parser(Command.SUBMIT_JOB, help="Submit a job for processing.")
@@ -153,8 +176,10 @@ def parse_arguments() -> Args:
     admin = subparsers.add_parser(Command.ADMIN, help="Issue admin commands")
     admin_parsers = admin.add_subparsers(title="Admin Commands", dest="admin_command")
 
-    admin_list_jobs = admin_parsers.add_parser(AdminCommand.LIST_JOBS, help="List jobs from all users")
-    admin_list_jobs.add_argument("state", help="Job state filter.", choices=[ state for state in AdminListJobsState ])
+    admin_list_jobs = admin_parsers.add_parser(AdminCommand.LIST_JOBS, help="List jobs from all users.")
+    admin_list_jobs.add_argument("state", help="Job state filter.", choices=[ state for state in AdminListJobsState ], action="append")
+
+    admin_kill_all = admin_parsers.add_parser(AdminCommand.KILL_ALL, help="Cancel all running or waiting jobs.")
 
     args = parser.parse_args()
     command = Command(args.command)
@@ -174,6 +199,8 @@ def parse_arguments() -> Args:
             return ListJobsArgs(**global_args, start_time=args.start_time, end_time=args.end_time)
         case Command.GET_JOB:
             return GetJobArgs(**global_args, job_id=args.job_id)
+        case Command.CANCEL_JOB:
+            return CancelJobArgs(**global_args, job_id=args.job_id)
         case Command.RESTART_JOB:
             return RestartJobArgs(**global_args, job_id=args.job_id)
         case Command.SUBMIT_JOB:
@@ -197,7 +224,9 @@ def parse_arguments() -> Args:
 
             match admin_command:
                 case AdminCommand.LIST_JOBS:
-                    return AdminListJobs(**global_args, state=args.state)
+                    return AdminListJobs(**global_args, states=args.state)
+                case AdminCommand.KILL_ALL:
+                    return AdminKillAll(**global_args)
 
             assert False, f"Unrecognized admin command: {admin_command}"
 
