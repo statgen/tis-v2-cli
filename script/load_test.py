@@ -103,24 +103,31 @@ def main() -> None:
     cli.section("Program Args")
     cli.print(program_args)
 
-    children = []
+    children: list[Process] = []
 
-    for token_file in program_args.token_files:
-        child_args = ChildArgs(
-            min_delay   = program_args.min_delay  ,
-            max_delay   = program_args.max_delay  ,
-            submissions = program_args.submissions,
-            token_file  = token_file              ,
-            vcf_files   = program_args.vcf_files  ,
-        )
+    try:
 
-        p = Process(target=call_api, args=(child_args,))
-        p.start()
+        for token_file in program_args.token_files:
+            child_args = ChildArgs(
+                min_delay   = program_args.min_delay  ,
+                max_delay   = program_args.max_delay  ,
+                submissions = program_args.submissions,
+                token_file  = token_file              ,
+                vcf_files   = program_args.vcf_files  ,
+            )
 
-        children.append(p)
+            p = Process(target=call_api, args=(child_args,))
+            p.start()
 
-    for p in children:
-        p.join()
+            children.append(p)
+
+        for p in children:
+            p.join()
+
+    except KeyboardInterrupt as e:
+        for p in children:
+            p.kill()
+        raise e
 
 
 if __name__ == "__main__":
