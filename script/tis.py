@@ -148,7 +148,7 @@ def parse_arguments() -> Args:
     parser.add_argument("--minimal-output", help="Only print the request-response header, supressing normal output.", action="store_true")
     parser.add_argument("--token-file", help="Path to a text file containing the authentication token.", type=check_file, default=None)
 
-    subparsers = parser.add_subparsers(title="Commands", dest="command")
+    subparsers = parser.add_subparsers(title="Commands", dest="command", required=True)
 
     list_jobs = subparsers.add_parser(Command.LIST_JOBS, help="List all of the user's jobs.")
     list_jobs.add_argument("--start-time", help="Only display results for jobs that were running after this time.", type=check_datetime, default=None)
@@ -174,7 +174,7 @@ def parse_arguments() -> Args:
     submit_job.add_argument("-f", "--file", help="VCF file to upload for testing. Repeat for a multi-file upload.", type=check_file, required=True, action="append")
 
     admin = subparsers.add_parser(Command.ADMIN, help="Issue admin commands")
-    admin_parsers = admin.add_subparsers(title="Admin Commands", dest="admin_command")
+    admin_parsers = admin.add_subparsers(title="Admin Commands", dest="admin_command", required=True)
 
     admin_list_jobs = admin_parsers.add_parser(AdminCommand.LIST_JOBS, help="List jobs from all users.")
     admin_list_jobs.add_argument("--state", help="Job state filter.", choices=[ state for state in AdminListJobsState ], required=True, action="append")
