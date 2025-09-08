@@ -10,6 +10,7 @@ from datetime import timedelta
 from multiprocessing import Process
 from dataclasses import dataclass
 
+from requests.exceptions import RequestException
 from pretty_cli import PrettyCli
 
 from local.api import TisV2Api
@@ -89,8 +90,11 @@ def call_api(args: ChildArgs) -> None:
         cli.print(f"[{args.token_file}] Sleeping {sleep_seconds:.02f} seconds.")
         time.sleep(sleep_seconds)
 
-        cli.print(f"[{args.token_file}] Submitting job")
-        api.submit_job(job_params)
+        try:
+            cli.print(f"[{args.token_file}] Submitting job")
+            api.submit_job(job_params)
+        except RequestException:
+            continue
 
 
 
