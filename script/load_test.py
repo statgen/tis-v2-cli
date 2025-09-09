@@ -6,7 +6,7 @@ import time
 import random
 import argparse
 from pathlib import Path
-from datetime import timedelta
+from datetime import datetime, timedelta
 from multiprocessing import Process
 from dataclasses import dataclass
 
@@ -16,6 +16,7 @@ from pretty_cli import PrettyCli
 from local.api import TisV2Api
 from local.request_schema import JobParams, RefPanel, Build, Phasing, Mode
 from local.util import check_file, check_timedelta
+from local.ansi_colors import FG_SELECTION, RESET
 
 
 @dataclass
@@ -54,14 +55,20 @@ def parse_arguments() -> ProgramArgs:
         min_delay   = args.min_delay  ,
         max_delay   = args.max_delay  ,
         submissions = args.submissions,
-        token_files = args.token_file,
-        vcf_files   = args.vcf_file  ,
+        token_files = args.token_file ,
+        vcf_files   = args.vcf_file   ,
     )
 
 
 def call_api(args: ChildArgs) -> None:
     cli = PrettyCli()
-    cli.print(f"[{args.token_file}] New identity starting")
+    color = FG_SELECTION[random.randint(0, len(FG_SELECTION)-1)]
+
+    def log(msg: str) -> None:
+        msg = f"{color}[{args.token_file}]{RESET} {msg}"
+        cli.print(msg)
+
+    log("New identity starting")
 
     api = TisV2Api(env="dev", cli=cli, token_file=args.token_file)
 
@@ -72,7 +79,7 @@ def call_api(args: ChildArgs) -> None:
     seed = os.urandom(128)
     rng.seed(seed)
 
-    cli.print(f"[{args.token_file}] Random seed: {seed.hex()}")
+    log(f"Random seed: {seed.hex()}")
 
     job_params = JobParams(
         refpanel   = RefPanel.DEV_TOPMED_R3_PROD,
@@ -87,13 +94,17 @@ def call_api(args: ChildArgs) -> None:
     for _ in range(args.submissions):
         sleep_seconds = rng.uniform(t, T)
 
-        cli.print(f"[{args.token_file}] Sleeping {sleep_seconds:.02f} seconds.")
+        log(f"Sleeping {sleep_seconds:.02f} seconds.")
         time.sleep(sleep_seconds)
 
+        start = datetime.now()
+        log("Submitting job")
         try:
-            cli.print(f"[{args.token_file}] Submitting job")
             api.submit_job(job_params)
+            end = datetime.now()
+            log(f"Submission took {(end - start).total_seconds()} seconds.")
         except RequestException:
+            log(f"Submission failed.")
             continue
 
 
