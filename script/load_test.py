@@ -20,12 +20,18 @@ from local.ansi_colors import FG_SELECTION, RESET
 
 
 @dataclass
+class ExtraArgs:
+    build: Build
+
+
+@dataclass
 class ProgramArgs:
     min_delay   : timedelta
     max_delay   : timedelta
     submissions : int
     token_files : list[Path]
     vcf_files   : list[Path]
+    extra_args  : ExtraArgs
 
 
 @dataclass
@@ -35,16 +41,21 @@ class ChildArgs:
     submissions : int
     token_file  : Path
     vcf_files   : list[Path]
+    extra_args  : ExtraArgs
 
 
 def parse_arguments() -> ProgramArgs:
     parser = argparse.ArgumentParser(description="Load test the TOPMed Imputation Server dev env")
 
-    parser.add_argument("--min-delay", help="Time expression indicating the minimum wait before next submission for a given account", type=check_timedelta, required=True)
-    parser.add_argument("--max-delay", help="Time expression indicating the maximum wait before next submission for a given account", type=check_timedelta, required=True)
-    parser.add_argument("--submissions", help="Number of submissions to be attempted per identity.", type=int, required=True)
-    parser.add_argument("--token-file", help="Path to a text file containing a valid auth token. Repeat for multiple identities.", type=check_file, required=True, action="append")
-    parser.add_argument("--vcf-file", help="VCF file to upload for testing. Repeat for a multi-file upload.", type=check_file, required=True, action="append")
+    # Mandatory arguments
+    parser.add_argument("--min-delay"  , help="Time expression indicating the minimum wait before next submission for a given account", type=check_timedelta, required=True)
+    parser.add_argument("--max-delay"  , help="Time expression indicating the maximum wait before next submission for a given account", type=check_timedelta, required=True)
+    parser.add_argument("--submissions", help="Number of submissions to be attempted per identity."                                   , type=int            , required=True)
+    parser.add_argument("--token-file" , help="Path to a text file containing a valid auth token. Repeat for multiple identities."    , type=check_file     , required=True, action="append")
+    parser.add_argument("--vcf-file"   , help="VCF file to upload for testing. Repeat for a multi-file upload."                       , type=check_file     , required=True, action="append")
+
+    # Optional arguments
+    parser.add_argument("--build", help="Data format (HG19 vs. HG38). Optional.", type=Build, default=Build.HG38)
 
     args = parser.parse_args()
 
@@ -57,6 +68,10 @@ def parse_arguments() -> ProgramArgs:
         submissions = args.submissions,
         token_files = args.token_file ,
         vcf_files   = args.vcf_file   ,
+
+        extra_args = ExtraArgs(
+            build = args.build,
+        ),
     )
 
 
@@ -84,7 +99,7 @@ def call_api(args: ChildArgs) -> None:
     job_params = JobParams(
         refpanel   = RefPanel.DEV_TOPMED_R3_PROD,
         files      = args.vcf_files,
-        build      = Build.HG38,
+        build      = args.extra_args.build,
         r2_filter  = 0.0,
         phasing    = Phasing.EAGLE,
         population = "all",
@@ -129,6 +144,7 @@ def main() -> None:
                 submissions = program_args.submissions,
                 token_file  = token_file              ,
                 vcf_files   = program_args.vcf_files  ,
+                extra_args  = program_args.extra_args ,
             )
 
             p = Process(target=call_api, args=(child_args,))
