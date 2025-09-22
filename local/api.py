@@ -14,7 +14,7 @@ from pretty_cli import PrettyCli
 
 from local import ansi_colors
 from local.request_schema import JobParams, AdminListJobsState
-from local.response_schema import JobInfo, JobResponse, JobState
+from local.response_schema import JobInfo, JobResponse, JobState, UserResponse
 
 
 BASE_URL = {
@@ -212,6 +212,17 @@ class TisV2Api:
         """Retries the specified job (must be in a `DEAD` state)."""
         response = self._get(url=f"jobs/{id}/restart")
         return JobResponse.from_json(response.json())
+
+    def admin_list_users(self) -> list[UserResponse]:
+        """Calls the admin user listing endpoint."""
+        response = self._get(url="admin/users")
+
+        if response.ok:
+            users = response.json()["data"]
+            users = [ UserResponse.from_json(u) for u in users ]
+            return users
+        else:
+            return []
 
     def admin_list_jobs(self, states: Iterable[AdminListJobsState]) -> list[JobInfo]:
         """Calls the admin job listing endpoint. Requires at least one state filter to produce output (see `AdminListJobsState`). The access token must have admin rights."""

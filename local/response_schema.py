@@ -203,6 +203,39 @@ class JobResponse:
         return JobResponse(success=False, message=None, id=None)
 
 
+@dataclass
+class UserResponse:
+    id              : int
+    username        : str
+    full_name       : str | None
+    last_login      : datetime
+    locked_until    : datetime
+    active          : bool
+    login_attempts  : int
+    role            : list[str]
+    mail            : str | None
+    admin           : bool
+    has_api_token   : bool
+    api_token_valid : bool
+
+    @staticmethod
+    def from_json(data) -> "UserResponse":
+        return UserResponse(
+            id              = int(data["id"]),
+            username        = _str_required(data["username"]),
+            full_name       =  _str_or_none(data, "fullName"),
+            last_login      = _timestamp_or_none(data["lastLogin"]),
+            locked_until    = _timestamp_or_none(data["lockedUntil"]),
+            active          = bool(data["active"]),
+            login_attempts  = int(data["loginAttempts"]),
+            role            = str(data["role"]).split(","),
+            mail            = _str_or_none(data, "mail"),
+            admin           = bool(data["admin"]),
+            has_api_token   = bool(data["hasApiToken"]),
+            api_token_valid = bool(data["apiTokenValid"]),
+        )
+
+
 def _str_or_none(d: dict, k: str) -> str | None:
     if (d is None) or (k is None):
         return None
@@ -242,3 +275,10 @@ def _process_list(field, func) -> list | None:
 def _db_timestamp_to_datetime(timestamp) -> datetime:
     # Cloudgene uses ms since the Unix epoch for time.
     return datetime.fromtimestamp(int(timestamp) / 1_000)
+
+
+def _timestamp_or_none(timestamp) -> datetime:
+    if isinstance(timestamp, str) and len(timestamp) > 0:
+        return datetime.fromisoformat(timestamp)
+    else:
+        return None

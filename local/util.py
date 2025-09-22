@@ -14,7 +14,10 @@ def display(cli: PrettyCli, obj) -> None:
     """
     out = asdict(obj)
 
-    def _flatten(d: dict) -> dict:
+    def _flatten(d) -> dict:
+        if not isinstance(d, dict):
+            return d
+
         keys = list(d.keys())
 
         for k in keys:

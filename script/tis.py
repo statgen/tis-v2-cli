@@ -26,8 +26,9 @@ class Command(StrEnum):
 
 
 class AdminCommand(StrEnum):
-    LIST_JOBS = "list-jobs"
-    KILL_ALL  = "kill-all"
+    LIST_USERS = "list-users"
+    LIST_JOBS  = "list-jobs"
+    KILL_ALL   = "kill-all"
 
 
 @dataclass
@@ -118,6 +119,18 @@ class AdminArgs(Args):
 
 
 @dataclass
+class AdminListUsers(AdminArgs):
+
+    def run_command(self, api: TisV2Api) -> None:
+        users = api.admin_list_users()
+
+        if not self.minimal_output:
+            for user in users:
+                # api.cli.print(user)
+                display(api.cli, user)
+
+
+@dataclass
 class AdminListJobs(AdminArgs):
     states: list[AdminListJobsState]
 
@@ -176,6 +189,8 @@ def parse_arguments() -> Args:
     admin = subparsers.add_parser(Command.ADMIN, help="Issue admin commands")
     admin_parsers = admin.add_subparsers(title="Admin Commands", dest="admin_command", required=True)
 
+    admin_list_users = admin_parsers.add_parser(AdminCommand.LIST_USERS, help="List all users.")
+
     admin_list_jobs = admin_parsers.add_parser(AdminCommand.LIST_JOBS, help="List jobs from all users.")
     admin_list_jobs.add_argument("--state", help="Job state filter.", choices=[ state for state in AdminListJobsState ], required=True, action="append")
 
@@ -223,6 +238,8 @@ def parse_arguments() -> Args:
             global_args["admin_command"] = admin_command
 
             match admin_command:
+                case AdminCommand.LIST_USERS:
+                    return AdminListUsers(**global_args)
                 case AdminCommand.LIST_JOBS:
                     return AdminListJobs(**global_args, states=args.state)
                 case AdminCommand.KILL_ALL:
