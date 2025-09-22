@@ -45,6 +45,25 @@ class Args:
         raise NotImplementedError()
 
 
+def filter_jobs(
+    jobs       : list[JobInfo],
+    start_time : datetime | None = None,
+    end_time   : datetime | None = None,
+) -> list[JobInfo]:
+    filtered = []
+
+    for j in jobs:
+        if start_time:
+            if j.end_time < start_time:
+                continue
+        if end_time:
+            if j.start_time > end_time:
+                continue
+        filtered.append(j)
+
+    return filtered
+
+
 @dataclass
 class ListJobsArgs(Args):
     start_time : datetime | None
@@ -52,25 +71,11 @@ class ListJobsArgs(Args):
 
     def run_command(self, api: TisV2Api) -> None:
         jobs = api.list_jobs()
-        jobs = self.filter_jobs(jobs)
+        jobs = filter_jobs(jobs, self.start_time, self.end_time)
 
         if not self.minimal_output:
             for job in jobs:
                 display(api.cli, job)
-
-    def filter_jobs(self, jobs: list[JobInfo]) -> list[JobInfo]:
-        filtered = []
-
-        for j in jobs:
-            if self.start_time:
-                if j.end_time < self.start_time:
-                    continue
-            if self.end_time:
-                if j.start_time > self.end_time:
-                    continue
-            filtered.append(j)
-
-        return filtered
 
 
 @dataclass
@@ -133,9 +138,12 @@ class AdminListUsers(AdminArgs):
 @dataclass
 class AdminListJobs(AdminArgs):
     states: list[AdminListJobsState]
+    start_time : datetime | None
+    end_time   : datetime | None
 
     def run_command(self, api: TisV2Api) -> None:
         jobs = api.admin_list_jobs(self.states)
+        jobs = filter_jobs(jobs, self.start_time, self.end_time)
 
         if not self.minimal_output:
             for job in jobs:
@@ -193,6 +201,8 @@ def parse_arguments() -> Args:
 
     admin_list_jobs = admin_parsers.add_parser(AdminCommand.LIST_JOBS, help="List jobs from all users.")
     admin_list_jobs.add_argument("--state", help="Job state filter.", choices=[ state for state in AdminListJobsState ], required=True, action="append")
+    admin_list_jobs.add_argument("--start-time", help="Only display results for jobs that were running after this time.", type=check_datetime, default=None)
+    admin_list_jobs.add_argument("--end-time", help="Only display results for jobs that were running before this time.", type=check_datetime, default=None)
 
     admin_kill_all = admin_parsers.add_parser(AdminCommand.KILL_ALL, help="Cancel all running or waiting jobs.")
 
@@ -241,7 +251,7 @@ def parse_arguments() -> Args:
                 case AdminCommand.LIST_USERS:
                     return AdminListUsers(**global_args)
                 case AdminCommand.LIST_JOBS:
-                    return AdminListJobs(**global_args, states=args.state)
+                    return AdminListJobs(**global_args, states=args.state, start_time=args.start_time, end_time=args.end_time)
                 case AdminCommand.KILL_ALL:
                     return AdminKillAll(**global_args)
 
