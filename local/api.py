@@ -75,6 +75,7 @@ class TisV2Api:
     headers      : dict[str, str]
     cli          : PrettyCli
 
+    print_http_call        : bool
     print_request_headers  : bool
     print_request_body     : bool
     print_response_headers : bool
@@ -83,6 +84,7 @@ class TisV2Api:
     def __init__(self,
         env                    : str                      ,
         cli                    : PrettyCli   = PrettyCli(),
+        print_http_call        : bool        = True       ,
         print_response_body    : bool        = False      ,
         print_request_headers  : bool        = False      ,
         print_request_body     : bool        = False      ,
@@ -93,6 +95,7 @@ class TisV2Api:
         self.env = env
         self.cli = cli
 
+        self.print_http_call        = print_http_call
         self.print_request_headers  = print_request_headers
         self.print_request_body     = print_request_body
         self.print_response_headers = print_response_headers
@@ -114,8 +117,9 @@ class TisV2Api:
         if not url.startswith("/"):
             url = "/" + url
 
-        self.cli.blank()
-        self.cli.print(f"{ansi_colors.FG_YELLOW}[{method} {url}]{ansi_colors.RESET}", end=" ")
+        if self.print_http_call:
+            self.cli.blank()
+            self.cli.print(f"{ansi_colors.FG_YELLOW}[{method} {url}]{ansi_colors.RESET}", end=" ")
 
         if (monitor_progress) and ("files" in kwargs):
             total_size = 0
@@ -150,9 +154,10 @@ class TisV2Api:
         else:
             response = requests.request(method=method, url=self.base_url + url, headers=self.headers, **kwargs)
 
-        color = ansi_colors.FG_GREEN if (response.status_code == 200) else ansi_colors.FG_RED
-        self.cli.print(f"{color}{response.status_code}{ansi_colors.RESET}")
-        self.cli.blank()
+        if self.print_http_call:
+            color = ansi_colors.FG_GREEN if (response.status_code == 200) else ansi_colors.FG_RED
+            self.cli.print(f"{color}{response.status_code}{ansi_colors.RESET}")
+            self.cli.blank()
 
         for (flag, title, data) in [
             (self.print_request_headers , "Request Headers" , response.request.headers),

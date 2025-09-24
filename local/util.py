@@ -1,11 +1,12 @@
+from enum import Enum
 import argparse
 from datetime import datetime, timedelta
-from dataclasses import asdict
+from dataclasses import asdict, is_dataclass
 from pathlib import Path
 
 from pretty_cli import PrettyCli
 
-from local.request_schema import RefPanel, AdminListJobsState
+from local.request_schema import RefPanel
 
 
 def display(cli: PrettyCli, obj) -> None:
@@ -117,3 +118,13 @@ def late_check_refpanel(parser: argparse.ArgumentParser, env: str, refpanel: str
         return REFPANEL_LOOKUP[env][processed]
     else:
         parser.error(f"-r/--refpanel must be a known environment-specific panel. Found unrecognized value: {refpanel}")
+
+
+def json_default(value):
+    if is_dataclass(value):
+        return asdict(value)
+    elif isinstance(value, datetime):
+        return value.isoformat(sep=" ")
+    elif isinstance(value, Enum):
+        return value.name
+    raise Exception(f"Value of type '{type(value)}' could not be parsed: {value}")
