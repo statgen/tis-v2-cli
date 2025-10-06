@@ -49,7 +49,7 @@ def main() -> None:
 
     params = JobParams(
         job_name   = "api-test",
-        refpanel   = RefPanel.DEV_HAPMAP_2,
+        refpanel   = RefPanel.TOPMED_DEV_HAPMAP_2,
         file       = TEST_FILE,
         build      = Build.HG19,
         r2_filter  = 0.0,

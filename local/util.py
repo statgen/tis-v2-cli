@@ -86,17 +86,54 @@ def check_datetime(arg_value: str) -> datetime:
 
 
 REFPANEL_LOOKUP = {
-    Environment.DEV: {
-        "hapmap"      : RefPanel.DEV_HAPMAP_2,
-        "hapmap2"     : RefPanel.DEV_HAPMAP_2,
-        "r3"          : RefPanel.DEV_TOPMED_R3_DEV,
-        "topmedr3"    : RefPanel.DEV_TOPMED_R3_DEV,
-        "r3prod"      : RefPanel.DEV_TOPMED_R3_PROD,
-        "topmedr3prod": RefPanel.DEV_TOPMED_R3_PROD,
+    Environment.TOPMED_DEV: {
+        "hapmap"       : RefPanel.TOPMED_DEV_HAPMAP_2,
+        "hapmap2"      : RefPanel.TOPMED_DEV_HAPMAP_2,
+        "r3"           : RefPanel.TOPMED_DEV_TOPMED_R3_DEV,
+        "topmedr3"     : RefPanel.TOPMED_DEV_TOPMED_R3_DEV,
+        "r3prod"       : RefPanel.TOPMED_DEV_TOPMED_R3_PROD,
+        "topmedr3prod" : RefPanel.TOPMED_DEV_TOPMED_R3_PROD,
     },
-    Environment.PROD: {
-        "r3"       : RefPanel.PROD_TOPMED_R3,
-        "topmedr3" : RefPanel.PROD_TOPMED_R3,
+    Environment.TOPMED_PROD: {
+        "r3"       : RefPanel.TOPMED_PROD_TOPMED_R3,
+        "topmedr3" : RefPanel.TOPMED_PROD_TOPMED_R3,
+    },
+    Environment.MICHIGAN: {
+        "1000gphase1"          : RefPanel.MICHIGAN_1KG_P1_V3,
+        "1000gp1"              : RefPanel.MICHIGAN_1KG_P1_V3,
+        "1000gphase1v3"        : RefPanel.MICHIGAN_1KG_P1_V3,
+        "1000gp1v3"            : RefPanel.MICHIGAN_1KG_P1_V3,
+
+        "1000gphase3"          : RefPanel.MICHIGAN_1KG_P3,
+        "1000gp3"              : RefPanel.MICHIGAN_1KG_P3,
+        "1000gphase3low"       : RefPanel.MICHIGAN_1KG_P3,
+        "1000gp3low"           : RefPanel.MICHIGAN_1KG_P3,
+
+        "1000gphase3deep"      : RefPanel.MICHIGAN_1KG_P3_30X,
+        "1000gphase330x"       : RefPanel.MICHIGAN_1KG_P3_30X,
+        "1000gp3deep"          : RefPanel.MICHIGAN_1KG_P3_30X,
+        "1000gp330x"           : RefPanel.MICHIGAN_1KG_P3_30X,
+
+        "1000gphase3v5"        : RefPanel.MICHIGAN_1KG_P3_V5,
+        "1000gp3v5"            : RefPanel.MICHIGAN_1KG_P3_V5,
+
+        "caapa"                : RefPanel.MICHIGAN_CAAPA,
+        "africanamericanpanel" : RefPanel.MICHIGAN_CAAPA,
+        "africanamerican"      : RefPanel.MICHIGAN_CAAPA,
+
+        "gasp"                 : RefPanel.MICHIGAN_GASP,
+        "genomeasiapilot"      : RefPanel.MICHIGAN_GASP,
+        "genomeasia"           : RefPanel.MICHIGAN_GASP,
+        "asiapilot"            : RefPanel.MICHIGAN_GASP,
+
+        "hrc"                  : RefPanel.MICHIGAN_HRC_R11,
+        "r11"                  : RefPanel.MICHIGAN_HRC_R11,
+        "hrcr11"               : RefPanel.MICHIGAN_HRC_R11,
+
+        "hapmap"               : RefPanel.MICHIGAN_HAPMAP_2,
+        "hapmap2"              : RefPanel.MICHIGAN_HAPMAP_2,
+
+        "samoan"               : RefPanel.MICHIGAN_SAMOAN,
     },
     Environment.MCPS: {
         "hapmap"  : RefPanel.MCPS_HAPMAP_2,
@@ -118,12 +155,12 @@ def late_check_refpanel(parser: argparse.ArgumentParser, env: Environment, refpa
     """
     assert env in REFPANEL_LOOKUP.keys()
 
-    processed = refpanel.strip().lower().replace("-", "").replace("_", "")
+    processed = refpanel.strip().lower().replace("-", "").replace("_", "").replace(".", "")
 
     if processed in REFPANEL_LOOKUP[env]:
         return REFPANEL_LOOKUP[env][processed]
     else:
-        parser.error(f"-r/--refpanel must be a known environment-specific panel. Found unrecognized value: {refpanel}")
+        parser.error(f"-r/--refpanel must be a known environment-specific panel. In environment '{env}', found unrecognized value: {refpanel}")
 
 
 def json_default(value):

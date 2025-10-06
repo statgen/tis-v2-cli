@@ -97,7 +97,7 @@ def call_api(args: ChildArgs) -> None:
     log(f"Random seed: {seed.hex()}")
 
     job_params = JobParams(
-        refpanel   = RefPanel.DEV_TOPMED_R3_PROD,
+        refpanel   = RefPanel.TOPMED_DEV_TOPMED_R3_PROD,
         files      = args.vcf_files,
         build      = args.extra_args.build,
         r2_filter  = 0.0,

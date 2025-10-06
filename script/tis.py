@@ -167,7 +167,7 @@ class AdminKillAll(AdminArgs):
 def parse_arguments() -> Args:
     parser = argparse.ArgumentParser(description="Query the TOPMed Imputation Server API")
 
-    parser.add_argument("env"         , help="Target environment ('dev', 'prod', or 'mcps')."          , type=str       , choices=["dev", "prod", "mcps"])
+    parser.add_argument("env"         , help="Target environment."                                     , type=str       , choices=[env for env in Environment])
     parser.add_argument("--debug"     , help="Activates additional debug printing."                                     , action="store_true")
     parser.add_argument("--repeat"    , help="Number of times to repeat the requested call."           , type=int       , default=1)
     parser.add_argument("--delay"     , help="Time in seconds to wait before performing the call."     , type=float     , default=0.0)

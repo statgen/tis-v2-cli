@@ -7,15 +7,17 @@ from enum import StrEnum
 
 
 class Environment(StrEnum):
-    DEV  = "dev"
-    PROD = "prod"
-    MCPS = "mcps"
+    TOPMED_DEV  = "topmed-dev"
+    TOPMED_PROD = "topmed"
+    MICHIGAN    = "michigan"
+    MCPS        = "mcps"
 
 
 _BASE_URL = {
-    Environment.DEV  : "https://topmed.dev.imputationserver.org",
-    Environment.PROD : "https://imputation.biodatacatalyst.nhlbi.nih.gov",
-    Environment.MCPS : "https://imputationserver-reg.sph.umich.edu",
+    Environment.TOPMED_DEV  : "https://topmed.dev.imputationserver.org",
+    Environment.TOPMED_PROD : "https://imputation.biodatacatalyst.nhlbi.nih.gov",
+    Environment.MICHIGAN    : "https://imputationserver.sph.umich.edu/",
+    Environment.MCPS        : "https://imputationserver-reg.sph.umich.edu",
 }
 
 
