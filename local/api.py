@@ -201,8 +201,7 @@ class TisV2Api:
 
     def submit_job(self, params: JobParams) -> JobResponse:
         """Submits a job for processing."""
-        response = self._post(url="/jobs/submit/imputationserver2", files=params.get_params())
-        # response = self._post(url="/jobs/submit/imputationserver2", files=params.get_params(), monitor_progress=True)
+        response = self._post(url="/jobs/submit/imputationserver2", files=params.get_params(), monitor_progress=True)
 
         try:
             return JobResponse.from_json(response.json())
