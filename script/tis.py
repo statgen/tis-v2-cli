@@ -62,7 +62,6 @@ class Args:
             case OutputStyle.MINIMAL:
                 pass
             case OutputStyle.JSON:
-
                 api.cli.print(json.dumps(data, ensure_ascii=False, indent=4, default=json_default))
 
 
@@ -167,7 +166,7 @@ class AdminKillAll(AdminArgs):
 def parse_arguments() -> Args:
     parser = argparse.ArgumentParser(description="Query the TOPMed Imputation Server API")
 
-    parser.add_argument("env"         , help="Target environment ('dev' or 'prod')."                   , type=str       , choices=["dev", "prod"])
+    parser.add_argument("env"         , help="Target environment ('dev', 'prod', or 'mcps')."          , type=str       , choices=["dev", "prod", "mcps"])
     parser.add_argument("--debug"     , help="Activates additional debug printing."                                     , action="store_true")
     parser.add_argument("--repeat"    , help="Number of times to repeat the requested call."           , type=int       , default=1)
     parser.add_argument("--delay"     , help="Time in seconds to wait before performing the call."     , type=float     , default=0.0)
@@ -274,8 +273,8 @@ def main() -> None:
     args = parse_arguments()
 
     api = TisV2Api(
-        env = "dev",
-        cli = cli  ,
+        env = args.env,
+        cli = cli,
         print_http_call = False if (args.output_style == OutputStyle.JSON) else True,
         print_request_headers  = args.debug,
         print_request_body     = args.debug,

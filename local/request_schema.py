@@ -21,6 +21,10 @@ class RefPanel(StrEnum):
     # prod
     PROD_TOPMED_R3     = "apps@topmed-r3@1.0.0"
 
+    # mcps
+    MCPS_HAPMAP_2 = "apps@hapmap-2@2.0.0"
+    MCPS_MCPS     = "apps@mcps@1.0.0"
+
 
 class Build(StrEnum):
     """Data format used in the VCF file (HG-19 vs. HG-38)."""

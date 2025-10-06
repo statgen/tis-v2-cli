@@ -86,17 +86,22 @@ def check_datetime(arg_value: str) -> datetime:
 
 REFPANEL_LOOKUP = {
     "dev": {
-        "hapmap": RefPanel.DEV_HAPMAP_2,
-        "hapmap2": RefPanel.DEV_HAPMAP_2,
-        "r3": RefPanel.DEV_TOPMED_R3_DEV,
-        "topmedr3": RefPanel.DEV_TOPMED_R3_DEV,
-        "r3prod": RefPanel.DEV_TOPMED_R3_PROD,
+        "hapmap"      : RefPanel.DEV_HAPMAP_2,
+        "hapmap2"     : RefPanel.DEV_HAPMAP_2,
+        "r3"          : RefPanel.DEV_TOPMED_R3_DEV,
+        "topmedr3"    : RefPanel.DEV_TOPMED_R3_DEV,
+        "r3prod"      : RefPanel.DEV_TOPMED_R3_PROD,
         "topmedr3prod": RefPanel.DEV_TOPMED_R3_PROD,
     },
     "prod": {
-        "r3": RefPanel.PROD_TOPMED_R3,
-        "topmedr3": RefPanel.PROD_TOPMED_R3,
+        "r3"       : RefPanel.PROD_TOPMED_R3,
+        "topmedr3" : RefPanel.PROD_TOPMED_R3,
     },
+    "mcps": {
+        "hapmap"  : RefPanel.MCPS_HAPMAP_2,
+        "hapmap2" : RefPanel.MCPS_HAPMAP_2,
+        "mcps"    : RefPanel.MCPS_MCPS,
+    }
 }
 
 

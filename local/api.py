@@ -20,11 +20,12 @@ from local.response_schema import JobInfo, JobResponse, JobState, UserResponse
 BASE_URL = {
     "dev"  : "https://topmed.dev.imputationserver.org",
     "prod" : "https://imputation.biodatacatalyst.nhlbi.nih.gov",
+    "mcps" : "https://imputationserver-reg.sph.umich.edu",
 }
 
 
 def _get_token(env: str, token_file: Path | None) -> str:
-    assert env in [ "dev", "prod" ]
+    assert env in [ "dev", "prod", "mcps" ]
 
     if token_file is not None:
         assert token_file.is_file(), f"Expected to find provided token file: {token_file}"
@@ -91,7 +92,7 @@ class TisV2Api:
         print_response_headers : bool        = False      ,
         token_file             : Path | None = None       ,
     ) -> None:
-        assert env in [ "dev", "prod" ]
+        assert env in [ "dev", "prod", "mcps" ]
         self.env = env
         self.cli = cli
 
