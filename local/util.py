@@ -6,6 +6,7 @@ from pathlib import Path
 
 from pretty_cli import PrettyCli
 
+from local.env import Environment
 from local.request_schema import RefPanel
 
 
@@ -85,7 +86,7 @@ def check_datetime(arg_value: str) -> datetime:
 
 
 REFPANEL_LOOKUP = {
-    "dev": {
+    Environment.DEV: {
         "hapmap"      : RefPanel.DEV_HAPMAP_2,
         "hapmap2"     : RefPanel.DEV_HAPMAP_2,
         "r3"          : RefPanel.DEV_TOPMED_R3_DEV,
@@ -93,11 +94,11 @@ REFPANEL_LOOKUP = {
         "r3prod"      : RefPanel.DEV_TOPMED_R3_PROD,
         "topmedr3prod": RefPanel.DEV_TOPMED_R3_PROD,
     },
-    "prod": {
+    Environment.PROD: {
         "r3"       : RefPanel.PROD_TOPMED_R3,
         "topmedr3" : RefPanel.PROD_TOPMED_R3,
     },
-    "mcps": {
+    Environment.MCPS: {
         "hapmap"  : RefPanel.MCPS_HAPMAP_2,
         "hapmap2" : RefPanel.MCPS_HAPMAP_2,
         "mcps"    : RefPanel.MCPS_MCPS,
@@ -105,7 +106,7 @@ REFPANEL_LOOKUP = {
 }
 
 
-def late_check_refpanel(parser: argparse.ArgumentParser, env: str, refpanel: str) -> RefPanel:
+def late_check_refpanel(parser: argparse.ArgumentParser, env: Environment, refpanel: str) -> RefPanel:
     """
     Validates the `refpanel` argument based on the passed `env`; used for late argument parsing.
 

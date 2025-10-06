@@ -13,20 +13,12 @@ from tqdm import tqdm
 from pretty_cli import PrettyCli
 
 from local import ansi_colors
+from local.env import Environment, get_base_url
 from local.request_schema import JobParams, AdminListJobsState
 from local.response_schema import JobInfo, JobResponse, JobState, UserResponse
 
 
-BASE_URL = {
-    "dev"  : "https://topmed.dev.imputationserver.org",
-    "prod" : "https://imputation.biodatacatalyst.nhlbi.nih.gov",
-    "mcps" : "https://imputationserver-reg.sph.umich.edu",
-}
-
-
-def _get_token(env: str, token_file: Path | None) -> str:
-    assert env in [ "dev", "prod", "mcps" ]
-
+def _get_token(env: Environment, token_file: Path | None) -> str:
     if token_file is not None:
         assert token_file.is_file(), f"Expected to find provided token file: {token_file}"
     else:
@@ -70,7 +62,7 @@ class TisV2Api:
     * `admin_kill_all()`: Cancels all running jobs.
     """
 
-    env          : str
+    env          : Environment
     base_url     : str
     access_token : str
     headers      : dict[str, str]
@@ -83,7 +75,7 @@ class TisV2Api:
     print_response_body    : bool
 
     def __init__(self,
-        env                    : str                      ,
+        env                    : Environment              ,
         cli                    : PrettyCli   = PrettyCli(),
         print_http_call        : bool        = True       ,
         print_response_body    : bool        = False      ,
@@ -92,7 +84,6 @@ class TisV2Api:
         print_response_headers : bool        = False      ,
         token_file             : Path | None = None       ,
     ) -> None:
-        assert env in [ "dev", "prod", "mcps" ]
         self.env = env
         self.cli = cli
 
@@ -102,7 +93,7 @@ class TisV2Api:
         self.print_response_headers = print_response_headers
         self.print_response_body    = print_response_body
 
-        self.base_url = BASE_URL[env] + "/api/v2"
+        self.base_url = get_base_url(env) + "/api/v2"
         self.access_token = _get_token(env, token_file)
 
         self.headers = { "X-Auth-Token": self.access_token }

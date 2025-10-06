@@ -7,11 +7,12 @@ import time
 from datetime import datetime
 from pathlib import Path
 from enum import StrEnum
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 
 from pretty_cli import PrettyCli
 
 from local.api import TisV2Api
+from local.env import Environment
 from local.request_schema import JobParams, Build, Phasing, Mode, AdminListJobsState
 from local.response_schema import JobInfo
 from local.util import display, check_file, late_check_refpanel, check_datetime, json_default
@@ -40,7 +41,7 @@ class OutputStyle(StrEnum):
 
 @dataclass
 class Args:
-    env          : str
+    env          : Environment
     debug        : bool
     repeat       : int
     delay        : float
@@ -215,10 +216,12 @@ def parse_arguments() -> Args:
     admin_kill_all = admin_parsers.add_parser(AdminCommand.KILL_ALL, help="Cancel all running or waiting jobs.")
 
     args = parser.parse_args()
+
+    env = Environment(args.env)
     command = Command(args.command)
 
     global_args = {
-        "env"          : args.env,
+        "env"          : env,
         "debug"        : args.debug,
         "repeat"       : args.repeat,
         "delay"        : args.delay,
@@ -237,7 +240,7 @@ def parse_arguments() -> Args:
         case Command.RESTART_JOB:
             return RestartJobArgs(**global_args, job_id=args.job_id)
         case Command.SUBMIT_JOB:
-            refpanel = late_check_refpanel(submit_job, args.env, args.refpanel)
+            refpanel = late_check_refpanel(submit_job, env, args.refpanel)
 
             job_params = JobParams(
                 job_name   = args.name,
