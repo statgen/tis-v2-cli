@@ -1,5 +1,5 @@
 [project]
-name = "tis-v2-cli"
+name = "tis-cli"
 version = "0.1.0"
 description = "Access the TOPMed Imputation Server programmatically."
 readme = "README.md"
