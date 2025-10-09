@@ -1,13 +1,24 @@
-from enum import Enum
 import argparse
+import tomllib
+from pathlib import Path
+from enum import Enum
 from datetime import datetime, timedelta
 from dataclasses import asdict, is_dataclass
-from pathlib import Path
 
 from pretty_cli import PrettyCli
 
 from local.env import Environment
 from local.request_schema import RefPanel
+
+
+def get_user_agent() -> str:
+    with open("pyproject.toml", "rb") as file:
+        data = tomllib.load(file)
+
+    project = data["project"]
+    user_agent = f"{project['name']}@{project['version']}"
+
+    return user_agent
 
 
 def display(cli: PrettyCli, obj) -> None:
@@ -89,8 +100,10 @@ REFPANEL_LOOKUP = {
     Environment.TOPMED_DEV: {
         "hapmap"       : RefPanel.TOPMED_DEV_HAPMAP_2,
         "hapmap2"      : RefPanel.TOPMED_DEV_HAPMAP_2,
+
         "r3"           : RefPanel.TOPMED_DEV_TOPMED_R3_DEV,
         "topmedr3"     : RefPanel.TOPMED_DEV_TOPMED_R3_DEV,
+
         "r3prod"       : RefPanel.TOPMED_DEV_TOPMED_R3_PROD,
         "topmedr3prod" : RefPanel.TOPMED_DEV_TOPMED_R3_PROD,
     },
@@ -138,6 +151,7 @@ REFPANEL_LOOKUP = {
     Environment.MCPS: {
         "hapmap"  : RefPanel.MCPS_HAPMAP_2,
         "hapmap2" : RefPanel.MCPS_HAPMAP_2,
+
         "mcps"    : RefPanel.MCPS_MCPS,
     }
 }

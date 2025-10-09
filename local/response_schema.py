@@ -5,7 +5,7 @@ Provides typed objects for response payloads.
 
 from enum import Enum, StrEnum
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class MessageType(Enum):
@@ -236,6 +236,25 @@ class UserResponse:
         )
 
 
+@dataclass
+class LoginResponse:
+    access_token : str
+    token_type   : str
+    expires_in   : timedelta
+    username     : str
+    roles        : list[str]
+
+    @staticmethod
+    def from_json(data) -> "LoginResponse":
+        return LoginResponse(
+            access_token = _str_required(data["access_token"]),
+            token_type   = _str_required(data["token_type"]),
+            expires_in   = timedelta(seconds=int(data["expires_in"])),
+            username     = _str_required(data["username"]),
+            roles        = _list_str_required(data["roles"]),
+        )
+
+
 def _str_or_none(d: dict, k: str) -> str | None:
     if (d is None) or (k is None):
         return None
@@ -282,3 +301,10 @@ def _timestamp_or_none(timestamp) -> datetime:
         return datetime.fromisoformat(timestamp)
     else:
         return None
+
+
+def _list_str_required(field) -> list[str]:
+    assert isinstance(field, list)
+    assert len(field) > 0
+    out = [ _str_required(entry) for entry in field ]
+    return out

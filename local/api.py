@@ -2,8 +2,8 @@
 Provides `TisV2Api`, a class to call the TOPMed Imputation Server endpoints (either `dev` or `prod`) programmatically.
 """
 
-
 from pathlib import Path
+from getpass import getpass
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -15,23 +15,8 @@ from pretty_cli import PrettyCli
 from local import ansi_colors
 from local.env import Environment, get_base_url
 from local.request_schema import JobParams, AdminListJobsState
-from local.response_schema import JobInfo, JobResponse, JobState, UserResponse
-
-
-def _get_token(env: Environment, token_file: Path | None) -> str:
-    if token_file is not None:
-        assert token_file.is_file(), f"Expected to find provided token file: {token_file}"
-    else:
-        data_dir = Path("data/")
-        assert data_dir.is_dir()
-
-        token_file = data_dir / f"{env}.token"
-        assert token_file.is_file(), f"Expected to find default token file: {token_file}"
-
-    with open(token_file, "r") as file_handle:
-        token = file_handle.read().strip()
-
-    return token
+from local.response_schema import JobInfo, JobResponse, JobState, UserResponse, LoginResponse
+from local.util import get_user_agent
 
 
 @dataclass
@@ -58,15 +43,21 @@ class TisV2Api:
     * `restart_job(id)`: Retries the specified job.
 
     Admin methods:
+    * `admin_login(username, password)`: Requests an admin-level token from the server.
+    * `admin_list_users()`: Calls the admin user listing endpoint.
     * `admin_list_jobs(states)`: Calls the admin job listing endpoint.
     * `admin_kill_all()`: Cancels all running jobs.
     """
 
     env          : Environment
-    base_url     : str
-    access_token : str
-    headers      : dict[str, str]
     cli          : PrettyCli
+    base_url     : str
+    user_agent   : str
+
+    token_file       : Path | None
+    admin_token_file : Path | None
+    access_token     : str  | None
+    admin_token      : str  | None
 
     print_http_call        : bool
     print_request_headers  : bool
@@ -83,9 +74,13 @@ class TisV2Api:
         print_request_body     : bool        = False      ,
         print_response_headers : bool        = False      ,
         token_file             : Path | None = None       ,
+        admin_token_file       : Path | None = None       ,
     ) -> None:
         self.env = env
         self.cli = cli
+
+        self.token_file       = token_file
+        self.admin_token_file = admin_token_file
 
         self.print_http_call        = print_http_call
         self.print_request_headers  = print_request_headers
@@ -93,10 +88,58 @@ class TisV2Api:
         self.print_response_headers = print_response_headers
         self.print_response_body    = print_response_body
 
-        self.base_url = get_base_url(env) + "/api/v2"
-        self.access_token = _get_token(env, token_file)
+        self.base_url = get_base_url(env)
+        self.user_agent = get_user_agent()
 
-        self.headers = { "X-Auth-Token": self.access_token }
+        self.access_token = None
+        self.admin_token  = None
+
+    def _get_access_token(self, admin: bool = False) -> str:
+        token = self.admin_token if admin else self.access_token
+
+        if token is not None:
+            return token
+
+        token_file = self.admin_token_file if admin else self.token_file
+
+        if token_file is not None:
+            if not token_file.is_file():
+                raise ValueError(f"A path to a token file was provided, but the file does not exist: {token_file}")
+        else:
+            data_dir = Path("data/")
+            if not data_dir.exists():
+                data_dir.mkdir(parents=False, exist_ok=False)
+
+            full_env = f"{self.env}{'-admin' if admin else ''}"
+            token_file = data_dir / f"{full_env}.token"
+
+            if not token_file.is_file():
+                self._request_token(admin, token_file)
+
+        with open(token_file, "r") as file_handle:
+            token = file_handle.read().strip()
+
+        if admin:
+            self.admin_token = token
+            self.admin_token_file = token_file
+        else:
+            self.access_token = token
+            self.token_file = token_file
+
+        return token
+
+    def _request_token(self, admin: bool, token_file: Path) -> None:
+        # TODO: Handle errors and retries?
+        if admin:
+            username = input(f"No token file found for admin access to environment '{self.env}'. Will attempt login.\nUsername:")
+            password = getpass()
+            response = self.admin_login(username, password)
+            token = response.access_token
+        else:
+            token = input(f"No token file found for current environment '{self.env}'. Please enter a valid token:")
+
+        with open(token_file, "w") as file_handle:
+            file_handle.write(token)
 
     def _request(self, method: str, url: str, monitor_progress: bool = False, **kwargs) -> requests.Response:
         """
@@ -108,6 +151,17 @@ class TisV2Api:
         """
         if not url.startswith("/"):
             url = "/" + url
+
+        admin = False
+        if "admin" in kwargs:
+            assert isinstance(kwargs["admin"], bool)
+            admin = kwargs["admin"]
+            del kwargs["admin"]
+
+        headers = {
+            "X-Auth-Token" : self._get_access_token(admin),
+            "User-Agent"   : self.user_agent,
+        }
 
         if self.print_http_call:
             self.cli.blank()
@@ -140,11 +194,11 @@ class TisV2Api:
                 e = MultipartEncoder(fields=fields)
                 m = MultipartEncoderMonitor(e, callback)
 
-                headers = self.headers | { "Content-Type": m.content_type }
+                headers = headers | { "Content-Type": m.content_type }
                 response = requests.request(method=method, url=self.base_url + url, headers=headers, data=m, **kwargs)
 
         else:
-            response = requests.request(method=method, url=self.base_url + url, headers=self.headers, **kwargs)
+            response = requests.request(method=method, url=self.base_url + url, headers=headers, **kwargs)
 
         if self.print_http_call:
             color = ansi_colors.FG_GREEN if (response.status_code == 200) else ansi_colors.FG_RED
@@ -164,9 +218,9 @@ class TisV2Api:
 
         return response
 
-    def _get(self, url: str, params=None) -> requests.Response:
+    def _get(self, url: str, params=None, **kwargs) -> requests.Response:
         """self._request() wrapper for all internal GET calls."""
-        return self._request(method="GET", url=url, params=params)
+        return self._request(method="GET", url=url, params=params, **kwargs)
 
     def _post(self, url: str, data = None, json = None, monitor_progress: bool = False, **kwargs) -> requests.Response:
         """self._request() wrapper for all internal POST calls."""
@@ -174,7 +228,7 @@ class TisV2Api:
 
     def list_jobs(self) -> list[JobInfo]:
         """Lists all jobs submitted by the current user (regardless of current status)."""
-        response = self._get(url="jobs")
+        response = self._get(url="api/v2/jobs")
 
         if response.status_code != 200:
             return []
@@ -186,13 +240,13 @@ class TisV2Api:
 
     def get_job(self, id: str) -> JobInfo:
         """Gets detailed information about the requested job."""
-        response = self._get(url=f"jobs/{id}")
+        response = self._get(url=f"api/v2/jobs/{id}")
         job_json = response.json()
         return JobInfo.from_json(job_json)
 
     def submit_job(self, params: JobParams) -> JobResponse:
         """Submits a job for processing."""
-        response = self._post(url="/jobs/submit/imputationserver2", files=params.get_params(), monitor_progress=True)
+        response = self._post(url="api/v2/jobs/submit/imputationserver2", files=params.get_params(), monitor_progress=True)
 
         try:
             return JobResponse.from_json(response.json())
@@ -201,17 +255,23 @@ class TisV2Api:
 
     def cancel_job(self, id: str) -> JobInfo:
         """Cancels the specified job."""
-        response = self._get(url=f"jobs/{id}/cancel")
+        response = self._get(url=f"api/v2/jobs/{id}/cancel")
         return JobInfo.from_json(response.json())
 
     def restart_job(self, id: str) -> JobResponse:
         """Retries the specified job (must be in a `DEAD` state)."""
-        response = self._get(url=f"jobs/{id}/restart")
+        response = self._get(url=f"api/v2/jobs/{id}/restart")
         return JobResponse.from_json(response.json())
 
+    def admin_login(self, username: str, password: str) -> LoginResponse:
+        """Requests an admin-level token from the server."""
+        # TODO: Optionally save the token to disk.
+        response = self._post(url="login", data={ "username": username, "password": password })
+        return LoginResponse.from_json(response.json())
+
     def admin_list_users(self) -> list[UserResponse]:
-        """Calls the admin user listing endpoint."""
-        response = self._get(url="admin/users")
+        """Calls the admin user listing endpoint. Requires admin rights."""
+        response = self._get(url="api/v2/admin/users", admin=True)
 
         if response.ok:
             users = response.json()["data"]
@@ -221,11 +281,11 @@ class TisV2Api:
             return []
 
     def admin_list_jobs(self, states: Iterable[AdminListJobsState]) -> list[JobInfo]:
-        """Calls the admin job listing endpoint. Requires at least one state filter to produce output (see `AdminListJobsState`). The access token must have admin rights."""
+        """Calls the admin job listing endpoint. Requires at least one state filter to produce output (see `AdminListJobsState`). Requires admin rights."""
         jobs = []
 
         for state in states:
-            response = self._get(url="admin/jobs", params={ "state": state })
+            response = self._get(url="api/v2/admin/jobs", params={ "state": state }, admin=True)
 
             if response.status_code != 200:
                 return []
@@ -236,7 +296,7 @@ class TisV2Api:
         return jobs
 
     def admin_kill_all(self) -> AdminKillAllResponse:
-        """Cancels all running jobs. The access token must have admin rights."""
+        """Cancels all running jobs. Requires admin rights."""
         killed = []
         failed = []
 

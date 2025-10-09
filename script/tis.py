@@ -4,6 +4,7 @@
 import json
 import argparse
 import time
+from getpass import getpass
 from datetime import datetime
 from pathlib import Path
 from enum import StrEnum
@@ -28,6 +29,7 @@ class Command(StrEnum):
 
 
 class AdminCommand(StrEnum):
+    LOGIN      = "login"
     LIST_USERS = "list-users"
     LIST_JOBS  = "list-jobs"
     KILL_ALL   = "kill-all"
@@ -138,6 +140,27 @@ class AdminArgs(Args):
 
 
 @dataclass
+class AdminLogin(AdminArgs):
+    username : str | None
+    password : str | None
+
+    def run_command(self, api: TisV2Api) -> None:
+        if self.username is None:
+            self.username = input("Username:")
+        if self.password is None:
+            self.password = getpass()
+
+        response = api.admin_login(self.username, self.password)
+        token_path = Path("data") / f"{self.env}-admin.token"
+
+        with open(token_path, "w") as file:
+            file.write(response.access_token)
+
+        response.access_token = None
+        self.output(api, response)
+
+
+@dataclass
 class AdminListUsers(AdminArgs):
 
     def run_command(self, api: TisV2Api) -> None:
@@ -206,6 +229,10 @@ def parse_arguments() -> Args:
     admin = subparsers.add_parser(Command.ADMIN, help="Issue admin commands")
     admin_parsers = admin.add_subparsers(title="Admin Commands", dest="admin_command", required=True)
 
+    admin_login = admin_parsers.add_parser(AdminCommand.LOGIN, help="Log in to an admin account.")
+    admin_login.add_argument("--username", help="Username for the admin account.", type=str, default=None)
+    admin_login.add_argument("--password", help="Password for the admin account.", type=str, default=None)
+
     admin_list_users = admin_parsers.add_parser(AdminCommand.LIST_USERS, help="List all users.")
 
     admin_list_jobs = admin_parsers.add_parser(AdminCommand.LIST_JOBS, help="List jobs from all users.")
@@ -259,6 +286,8 @@ def parse_arguments() -> Args:
             global_args["admin_command"] = admin_command
 
             match admin_command:
+                case AdminCommand.LOGIN:
+                    return AdminLogin(**global_args, username=args.username, password=args.password)
                 case AdminCommand.LIST_USERS:
                     return AdminListUsers(**global_args)
                 case AdminCommand.LIST_JOBS:
