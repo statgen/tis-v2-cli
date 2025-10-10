@@ -15,7 +15,7 @@ from pretty_cli import PrettyCli
 from local import ansi_colors
 from local.env import Environment, get_base_url
 from local.request_schema import JobParams, AdminListJobsState
-from local.response_schema import JobInfo, JobResponse, JobState, UserResponse, LoginResponse
+from local.response_schema import JobInfo, JobResponse, JobState, UserResponse, LoginResponse, RefpanelResponse
 from local.util import get_user_agent
 
 
@@ -262,6 +262,13 @@ class TisV2Api:
         """Retries the specified job (must be in a `DEAD` state)."""
         response = self._get(url=f"api/v2/jobs/{id}/restart")
         return JobResponse.from_json(response.json())
+
+    def list_refpanels(self) -> list[RefpanelResponse]:
+        response = self._get(url="api/v2/server/apps/imputationserver2")
+        data = response.json()
+        refpanel_data = next(entry for entry in data["params"] if entry["id"] == "refpanel")
+        refpanels = [ RefpanelResponse.from_json(entry) for entry in  refpanel_data["values"] ]
+        return refpanels
 
     def admin_login(self, username: str, password: str) -> LoginResponse:
         """Requests an admin-level token from the server."""

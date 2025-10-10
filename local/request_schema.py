@@ -14,27 +14,27 @@ class RefPanel(StrEnum):
     """Valid reference panel strings for dev and prod (see prefix)."""
 
     # TOPMed dev
-    TOPMED_DEV_HAPMAP_2       = "apps@hapmap-2@2.0.0"
-    TOPMED_DEV_TOPMED_R3_DEV  = "apps@topmed-r3@1.0.0"
-    TOPMED_DEV_TOPMED_R3_PROD = "apps@topmed-r3-prod@1.0.0"
+    TOPMED_DEV_HAPMAP_2       = "hapmap-2"
+    TOPMED_DEV_TOPMED_R3_DEV  = "topmed-r3"
+    TOPMED_DEV_TOPMED_R3_PROD = "topmed-r3-prod"
 
     # TOPMed prod
-    TOPMED_PROD_TOPMED_R3 = "apps@topmed-r3@1.0.0"
+    TOPMED_PROD_TOPMED_R3 = "topmed-r3"
 
     # Michigan
-    MICHIGAN_1KG_P1_V3  = "apps@1000g-phase-1@2.0.0"
-    MICHIGAN_1KG_P3     = "apps@1000g-phase3-low@1.0.0"
-    MICHIGAN_1KG_P3_30X = "apps@1000g-phase3-deep@1.0.0"
-    MICHIGAN_1KG_P3_V5  = "apps@1000g-phase-3-v5@2.0.0"
-    MICHIGAN_CAAPA      = "apps@caapa@2.0.0"
-    MICHIGAN_GASP       = "apps@genome-asia-panel@1.0.0"
-    MICHIGAN_HRC_R11    = "apps@hrc-r1.1@2.0.0"
-    MICHIGAN_HAPMAP_2   = "apps@hapmap-2@2.0.0"
-    MICHIGAN_SAMOAN     = "apps@samoan@2.0.0"
+    MICHIGAN_1KG_P1_V3  = "1000g-phase-1"
+    MICHIGAN_1KG_P3     = "1000g-phase3-low"
+    MICHIGAN_1KG_P3_30X = "1000g-phase3-deep"
+    MICHIGAN_1KG_P3_V5  = "1000g-phase-3-v5"
+    MICHIGAN_CAAPA      = "caapa"
+    MICHIGAN_GASP       = "genome-asia-panel"
+    MICHIGAN_HRC_R11    = "hrc-r1.1"
+    MICHIGAN_HAPMAP_2   = "hapmap-2"
+    MICHIGAN_SAMOAN     = "samoan"
 
     # mcps
-    MCPS_HAPMAP_2 = "apps@hapmap-2@2.0.0"
-    MCPS_MCPS     = "apps@mcps@1.0.0"
+    MCPS_HAPMAP_2 = "hapmap-2"
+    MCPS_MCPS     = "mcps"
 
 
 class Build(StrEnum):

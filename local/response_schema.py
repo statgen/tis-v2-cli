@@ -255,6 +255,27 @@ class LoginResponse:
         )
 
 
+@dataclass
+class RefpanelResponse:
+    api_name     : str
+    version      : str
+    display_name : str
+
+    @staticmethod
+    def from_json(data) -> "RefpanelResponse":
+        api_key   = _str_required(data["key"])
+        api_value = _str_required(data["value"])
+
+        key_parts = api_key.split("@")
+        assert len(key_parts) == 3
+
+        return RefpanelResponse(
+            api_name     = key_parts[1],
+            version      = key_parts[2],
+            display_name = api_value,
+        )
+
+
 def _str_or_none(d: dict, k: str) -> str | None:
     if (d is None) or (k is None):
         return None

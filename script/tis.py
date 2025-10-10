@@ -20,12 +20,13 @@ from local.util import display, check_file, late_check_refpanel, check_datetime,
 
 
 class Command(StrEnum):
-    LIST_JOBS   = "list-jobs"
-    GET_JOB     = "get-job"
-    SUBMIT_JOB  = "submit-job"
-    CANCEL_JOB  = "cancel-job"
-    RESTART_JOB = "restart-job"
-    ADMIN       = "admin"
+    LIST_JOBS      = "list-jobs"
+    GET_JOB        = "get-job"
+    SUBMIT_JOB     = "submit-job"
+    CANCEL_JOB     = "cancel-job"
+    RESTART_JOB    = "restart-job"
+    LIST_REFPANELS = "list-refpanels"
+    ADMIN          = "admin"
 
 
 class AdminCommand(StrEnum):
@@ -135,6 +136,13 @@ class SubmitJobArgs(Args):
 
 
 @dataclass
+class ListRefpanelsArgs(Args):
+    def run_command(self, api: TisV2Api) -> None:
+        response = api.list_refpanels()
+        self.output(api, response)
+
+
+@dataclass
 class AdminArgs(Args):
     admin_command: AdminCommand
 
@@ -226,6 +234,8 @@ def parse_arguments() -> Args:
     submit_job.add_argument("-P", "--population", help="Reference population used for the allele frequency check"             , type=str       , default=None)
     submit_job.add_argument("-m", "--mode"      , help="Run QC only, or do QC + Imputation."                                  , type=Mode      , default=Mode.IMPUTATION)
 
+    list_refpanels = subparsers.add_parser(Command.LIST_REFPANELS, help="List the available reference panels in the selected environment.")
+
     admin = subparsers.add_parser(Command.ADMIN, help="Issue admin commands")
     admin_parsers = admin.add_subparsers(title="Admin Commands", dest="admin_command", required=True)
 
@@ -266,6 +276,8 @@ def parse_arguments() -> Args:
             return CancelJobArgs(**global_args, job_id=args.job_id)
         case Command.RESTART_JOB:
             return RestartJobArgs(**global_args, job_id=args.job_id)
+        case Command.LIST_REFPANELS:
+            return ListRefpanelsArgs(**global_args)
         case Command.SUBMIT_JOB:
             refpanel = late_check_refpanel(submit_job, env, args.refpanel)
 
