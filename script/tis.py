@@ -198,20 +198,16 @@ class AdminKillAll(AdminArgs):
 
 def parse_arguments() -> Args:
     parser = argparse.ArgumentParser(description="Query the TOPMed Imputation Server API")
- 
+
     # This argument is a dummy. To avoid messing with the current structure, -v and --version are handled manually before parsing arguments.
     parser.add_argument("-v", "--version", help="Print script version and exit.", action="store_true")
 
-    parser.add_argument("env"         , help="Target environment."                                     , type=str       , choices=[env for env in Environment])
-    parser.add_argument("--debug"     , help="Activates additional debug printing."                                     , action="store_true")
-    parser.add_argument("--repeat"    , help="Number of times to repeat the requested call."           , type=int       , default=1)
-    parser.add_argument("--delay"     , help="Time in seconds to wait before performing the call."     , type=float     , default=0.0)
-    parser.add_argument("--token-file", help="Path to a text file containing the authentication token.", type=check_file, default=None)
-
-    output_opts = parser.add_mutually_exclusive_group()
-    output_opts.add_argument("--pretty-output"   , help="Pretty-print output (default behavior)."                        , action="store_const", dest="output_style", const=OutputStyle.PRETTY_CLI)
-    output_opts.add_argument("--minimal-output", help="Only print the request-response header, supressing normal output.", action="store_const", dest="output_style", const=OutputStyle.MINIMAL)
-    output_opts.add_argument("--json-output"   , help="Print output as JSON."                                            , action="store_const", dest="output_style", const=OutputStyle.JSON)
+    parser.add_argument("env"         , help="Target environment."                                     , type=str        , choices=[env for env in Environment])
+    parser.add_argument("--debug"     , help="Activates additional debug printing."                                      , action="store_true")
+    parser.add_argument("--repeat"    , help="Number of times to repeat the requested call."           , type=int        , default=1)
+    parser.add_argument("--delay"     , help="Time in seconds to wait before performing the call."     , type=float      , default=0.0)
+    parser.add_argument("--token-file", help="Path to a text file containing the authentication token.", type=check_file , default=None)
+    parser.add_argument("--output"    , help="Output format (default: pretty-print)"                   , type=OutputStyle, choices=[ style for style in OutputStyle ], default=OutputStyle.PRETTY_CLI, dest="output_style")
 
     subparsers = parser.add_subparsers(title="Commands", dest="command", required=True)
 
