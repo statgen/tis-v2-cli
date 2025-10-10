@@ -3,7 +3,7 @@ import tomllib
 from pathlib import Path
 from enum import Enum
 from datetime import datetime, timedelta
-from dataclasses import asdict, is_dataclass
+from dataclasses import dataclass, asdict, is_dataclass
 
 from pretty_cli import PrettyCli
 
@@ -11,13 +11,29 @@ from local.env import Environment, match_refpanel
 from local.request_schema import RefPanel
 
 
-def get_user_agent() -> str:
+@dataclass
+class ProjectInfo:
+    name        : str
+    version     : str
+    description : str
+
+
+def get_project_info() -> ProjectInfo:
     with open("pyproject.toml", "rb") as file:
         data = tomllib.load(file)
 
     project = data["project"]
-    user_agent = f"{project['name']}@{project['version']}"
 
+    return ProjectInfo(
+        name        = project["name"       ],
+        version     = project["version"    ],
+        description = project["description"],
+    )
+
+
+def get_user_agent() -> str:
+    project_info = get_project_info()
+    user_agent = f"{project_info.name}@{project_info.version}"
     return user_agent
 
 

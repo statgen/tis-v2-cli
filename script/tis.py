@@ -1,6 +1,7 @@
 #!/bin/env python3
 
 
+import sys
 import json
 import argparse
 import time
@@ -197,6 +198,9 @@ class AdminKillAll(AdminArgs):
 
 def parse_arguments() -> Args:
     parser = argparse.ArgumentParser(description="Query the TOPMed Imputation Server API")
+ 
+    # This argument is a dummy. To avoid messing with the current structure, -v and --version are handled manually before parsing arguments.
+    parser.add_argument("-v", "--version", help="Print script version and exit.", action="store_true")
 
     parser.add_argument("env"         , help="Target environment."                                     , type=str       , choices=[env for env in Environment])
     parser.add_argument("--debug"     , help="Activates additional debug printing."                                     , action="store_true")
@@ -314,6 +318,13 @@ def parse_arguments() -> Args:
 
 def main() -> None:
     cli = PrettyCli()
+
+    # Version printing handled separately because it would be very messy to integrate with the existing flow.
+    if len(sys.argv) == 2 and sys.argv[1] in [ "-v", "--version" ]:
+        project_info = get_project_info()
+        cli.print(project_info.version)
+        return
+
     args = parse_arguments()
 
     api = TisV2Api(
