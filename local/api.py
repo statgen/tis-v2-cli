@@ -15,7 +15,7 @@ from pretty_cli import PrettyCli
 from local import ansi_colors
 from local.env import Environment, get_base_url
 from local.request_schema import JobParams, AdminListJobsState
-from local.response_schema import JobInfo, JobResponse, JobState, UserResponse, LoginResponse, RefpanelResponse
+from local.response_schema import JobInfo, JobResponse, JobState, UserResponse, LoginResponse, RefpanelResponse, PopulationResponse
 from local.util import get_user_agent
 
 
@@ -266,8 +266,16 @@ class TisV2Api:
     def list_refpanels(self) -> list[RefpanelResponse]:
         response = self._get(url="api/v2/server/apps/imputationserver2")
         data = response.json()
-        refpanel_data = next(entry for entry in data["params"] if entry["id"] == "refpanel")
+
+        refpanel_data       = next(entry for entry in data["params"] if entry["id"] == "refpanel")
+        all_population_data = next(entry for entry in data["params"] if entry["id"] == "population")
+
         refpanels = [ RefpanelResponse.from_json(entry) for entry in  refpanel_data["values"] ]
+
+        for panel in refpanels:
+            refpanel_population_data = next(entry for entry in all_population_data["values"] if panel.api_name in entry["key"])
+            panel.populations = [ PopulationResponse.from_json(entry) for entry in  refpanel_population_data["values"] ]
+
         return refpanels
 
     def admin_login(self, username: str, password: str) -> LoginResponse:

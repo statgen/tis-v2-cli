@@ -17,7 +17,7 @@ from local.api import TisV2Api
 from local.env import Environment
 from local.request_schema import JobParams, Build, Phasing, Mode, AdminListJobsState
 from local.response_schema import JobInfo
-from local.util import display, check_file, late_check_refpanel, check_datetime, json_default
+from local.util import display, check_file, late_check_refpanel, check_datetime, json_default, get_project_info
 
 
 class Command(StrEnum):

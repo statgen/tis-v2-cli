@@ -256,10 +256,24 @@ class LoginResponse:
 
 
 @dataclass
+class PopulationResponse:
+    api_name     : str
+    display_name : str
+
+    @staticmethod
+    def from_json(data) -> "PopulationResponse":
+        return PopulationResponse(
+            api_name     = _str_required(data["key"]),
+            display_name = _str_required(data["value"]),
+        )
+
+
+@dataclass
 class RefpanelResponse:
     api_name     : str
     version      : str
     display_name : str
+    populations  : list[PopulationResponse]
 
     @staticmethod
     def from_json(data) -> "RefpanelResponse":
@@ -273,6 +287,7 @@ class RefpanelResponse:
             api_name     = key_parts[1],
             version      = key_parts[2],
             display_name = api_value,
+            populations  = [],
         )
 
 
