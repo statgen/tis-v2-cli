@@ -27,6 +27,7 @@ class Command(StrEnum):
     CANCEL_JOB     = "cancel-job"
     RESTART_JOB    = "restart-job"
     LIST_REFPANELS = "list-refpanels"
+    DOWNLOAD       = "download"
     ADMIN          = "admin"
 
 
@@ -144,6 +145,16 @@ class ListRefpanelsArgs(Args):
 
 
 @dataclass
+class DownloadArgs(Args):
+    download_dir: Path
+    job_id: str
+
+    def run_command(self, api: TisV2Api) -> None:
+        response = api.download(self.download_dir, self.job_id)
+        self.output(api, response)
+
+
+@dataclass
 class AdminArgs(Args):
     admin_command: AdminCommand
 
@@ -236,6 +247,10 @@ def parse_arguments() -> Args:
 
     list_refpanels = subparsers.add_parser(Command.LIST_REFPANELS, help="List the available reference panels in the selected environment.")
 
+    download = subparsers.add_parser(Command.DOWNLOAD, help="Download all files for the given job.")
+    download.add_argument("--download-dir", help="Directory used for file downloads. If the job contains outputs, a sub-dir named <job-id>/ will be created, and used to store all outputs.", type=Path, default=Path(".").resolve())
+    download.add_argument("job_id", help="ID of the job to download.")
+
     admin = subparsers.add_parser(Command.ADMIN, help="Issue admin commands")
     admin_parsers = admin.add_subparsers(title="Admin Commands", dest="admin_command", required=True)
 
@@ -278,6 +293,8 @@ def parse_arguments() -> Args:
             return RestartJobArgs(**global_args, job_id=args.job_id)
         case Command.LIST_REFPANELS:
             return ListRefpanelsArgs(**global_args)
+        case Command.DOWNLOAD:
+            return DownloadArgs(**global_args, download_dir=args.download_dir, job_id=args.job_id)
         case Command.SUBMIT_JOB:
             refpanel = late_check_refpanel(submit_job, env, args.refpanel)
 

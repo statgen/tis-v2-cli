@@ -6,6 +6,9 @@ Provides typed objects for response payloads.
 from enum import Enum, StrEnum
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Any
+
+from local.util import parse_size
 
 
 class MessageType(Enum):
@@ -92,7 +95,7 @@ class DownloadInfo:
     name         : str
     path         : str
     hash         : str
-    size         : str
+    size         : int
     user         : str
     count        : int
     parameter_id : int
@@ -103,7 +106,7 @@ class DownloadInfo:
             name         = _str_or_none(data, "name"),
             path         = _str_or_none(data, "path"),
             hash         = _str_or_none(data, "hash"),
-            size         = _str_or_none(data, "size"),
+            size         = _size_or_none(data, "size"),
             user         = _str_or_none(data, "user"),
             count        = int(data["count"]),
             parameter_id = int(data["parameterId"]),
@@ -224,8 +227,8 @@ class UserResponse:
             id              = int(data["id"]),
             username        = _str_required(data["username"]),
             full_name       =  _str_or_none(data, "fullName"),
-            last_login      = _timestamp_or_none(data["lastLogin"]),
-            locked_until    = _timestamp_or_none(data["lockedUntil"]),
+            last_login      = _require_timestamp(data["lastLogin"]),
+            locked_until    = _require_timestamp(data["lockedUntil"]),
             active          = bool(data["active"]),
             login_attempts  = int(data["loginAttempts"]),
             role            = str(data["role"]).split(","),
@@ -291,7 +294,7 @@ class RefpanelResponse:
         )
 
 
-def _str_or_none(d: dict, k: str) -> str | None:
+def _str_or_none(d: dict[str, Any], k: str) -> str | None:
     if (d is None) or (k is None):
         return None
 
@@ -332,11 +335,17 @@ def _db_timestamp_to_datetime(timestamp) -> datetime:
     return datetime.fromtimestamp(int(timestamp) / 1_000)
 
 
-def _timestamp_or_none(timestamp) -> datetime:
+def _timestamp_or_none(timestamp) -> datetime | None:
     if isinstance(timestamp, str) and len(timestamp) > 0:
         return datetime.fromisoformat(timestamp)
     else:
         return None
+
+
+def _require_timestamp(timestamp) -> datetime:
+    out = _timestamp_or_none(timestamp)
+    assert out is not None
+    return out
 
 
 def _list_str_required(field) -> list[str]:
@@ -344,3 +353,15 @@ def _list_str_required(field) -> list[str]:
     assert len(field) > 0
     out = [ _str_required(entry) for entry in field ]
     return out
+
+
+def _size_or_none(d: dict[str, Any], k: str) -> int | None:
+    if not k in d:
+        return None
+
+    field = d[k]
+
+    if isinstance(field, str) and len(field) > 0:
+        return parse_size(field)
+    else:
+        return None

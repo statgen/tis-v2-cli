@@ -138,3 +138,25 @@ def json_default(value):
     elif isinstance(value, Enum):
         return value.name
     raise Exception(f"Value of type '{type(value)}' could not be parsed: {value}")
+
+
+def parse_size(size: str) -> int:
+    parts = size.split()
+    assert len(parts) == 2, f"Expected <number> <unit>, but found: '{size}'"
+
+    value = int(parts[0])
+    units = parts[1]
+
+    match units.lower():
+        case "b" | "bytes":
+            mutliplier = 1
+        case "kb" | "kib":
+            mutliplier = 1024
+        case "mb" | "mib":
+            mutliplier = 1024 ** 2
+        case "gb" | "gib":
+            mutliplier = 1024 ** 3
+        case _:
+            raise Exception(f"Units not recognized: {units}")
+
+    return value * mutliplier

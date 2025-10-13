@@ -15,8 +15,12 @@ from pretty_cli import PrettyCli
 from local import ansi_colors
 from local.env import Environment, get_base_url
 from local.request_schema import JobParams, AdminListJobsState
-from local.response_schema import JobInfo, JobResponse, JobState, UserResponse, LoginResponse, RefpanelResponse, PopulationResponse
+from local.response_schema import JobInfo, JobResponse, JobState, UserResponse, LoginResponse, RefpanelResponse, PopulationResponse, DownloadInfo
 from local.util import get_user_agent
+
+
+def get_bar(desc: str, total: int) -> tqdm:
+    return tqdm(desc=desc, total=total, unit="B", unit_scale=True, unit_divisor=1024)
 
 
 @dataclass
@@ -186,7 +190,7 @@ class TisV2Api:
 
             assert total_size > 0
 
-            with tqdm(desc="Upload", total=total_size, unit="B", unit_scale=True, unit_divisor=1024) as bar:
+            with get_bar(desc="Upload", total=total_size) as bar:
                 def callback(monitor: MultipartEncoderMonitor) -> None:
                     new_bytes = monitor.bytes_read - bar.n
                     bar.update(new_bytes)
@@ -277,6 +281,43 @@ class TisV2Api:
             panel.populations = [ PopulationResponse.from_json(entry) for entry in  refpanel_population_data["values"] ]
 
         return refpanels
+
+    def download(self, download_dir: Path, job_id: str) -> list[DownloadInfo]:
+        out_dir = download_dir / job_id
+        out_dir = out_dir.resolve()
+
+        job = self.get_job(job_id)
+
+        output_params = job.output_params if job.output_params is not None else []
+
+        downloaded_files = []
+
+        for param in output_params:
+            self.cli.section(param.description)
+
+            files = param.files if param.files is not None else []
+
+            for file in files:
+                download_url = f"share/results/{file.hash}/{file.name}"
+                out_file = out_dir / file.name
+                out_parent = out_file.parent # Sometimes file.name is a nested path, and it causes issues with open()
+
+                # TODO: Consider adding sync-like behavior where we don't re-download unnecessarily.
+
+                if not out_parent.is_dir():
+                    out_parent.mkdir(parents=True, exist_ok=True)
+
+                with self._get(url=download_url, stream=True) as download_response:
+                    download_response.raise_for_status()
+                    with open(out_file, "wb") as file_handle:
+                        with get_bar(desc=file.name, total=file.size) as bar:
+                            for chunk in download_response.iter_content(chunk_size=8192):
+                                file_handle.write(chunk)
+                                bar.update(len(chunk))
+
+                downloaded_files.append(DownloadInfo(name=file.name, path=None, hash=None, size=file.size, user=None, count=None, parameter_id=None))
+
+        return downloaded_files
 
     def admin_login(self, username: str, password: str) -> LoginResponse:
         """Requests an admin-level token from the server."""
