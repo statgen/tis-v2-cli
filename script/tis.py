@@ -242,7 +242,7 @@ def parse_arguments() -> Args:
     submit_job.add_argument("-n", "--name"      , help="Optional name for this job (will be assigned a unique ID regardless).", type=str       , default=None)
     submit_job.add_argument("-R", "--r2-filter" , help="rsq filter. Set to 0 or leave blank for none"                         , type=float     , default=0.0)
     submit_job.add_argument("-p", "--phasing"   , help="Phasing engine to use."                                               , type=Phasing   , default=Phasing.EAGLE)
-    submit_job.add_argument("-P", "--population", help="Reference population used for the allele frequency check"             , type=str       , default=None)
+    submit_job.add_argument("-P", "--population", help="Reference population used for the allele frequency check"             , type=str       , default="off")
     submit_job.add_argument("-m", "--mode"      , help="Run QC only, or do QC + Imputation."                                  , type=Mode      , default=Mode.IMPUTATION)
 
     list_refpanels = subparsers.add_parser(Command.LIST_REFPANELS, help="List the available reference panels in the selected environment.")
