@@ -68,25 +68,38 @@ class JobParams:
       expected by the `files` parameter in `requests.post()`.
     """
     refpanel   : RefPanel
-    files      : list[PathLike]
-    build      : Build
-    r2_filter  : float
-    phasing    : Phasing
     population : str
-    mode       : Mode
-    job_name   : str | None = None
+    files      : list[PathLike]
+    job_name   : str     | None = None
+    build      : Build   | None = None
+    r2_filter  : float   | None = None
+    phasing    : Phasing | None = None
+    mode       : Mode    | None = None
 
     def get_params(self) -> list[tuple[str, tuple]]:
-        params = [
-            # header        file  value
-            ("job-name"  , (None, self.job_name      )),
-            ("refpanel"  , (None, str(self.refpanel) )),
-            ("build"     , (None, str(self.build)    )),
-            ("r2Filter"  , (None, str(self.r2_filter))),
-            ("phasing"   , (None, str(self.phasing)  )),
-            ("population", (None, self.population    )),
-            ("mode"      , (None, str(self.mode)     )),
-        ]
+        """
+        Returns a list of form fields in the format expected by the `files` parameter in `requests.post()`.
+
+        * Skips `None` fields.
+        * Opens handles for all files in `self.files`. The file contents will be uploaded as octet streams.
+        """
+
+        form_fields = {
+            "refpanel"   : self.refpanel,
+            "population" : self.population,
+            "job-name"   : self.job_name,
+            "build"      : self.build,
+            "r2Filter"   : self.r2_filter,
+            "phasing"    : self.phasing,
+            "mode"       : self.mode,
+        }
+
+        params = []
+        for (header, value) in form_fields:
+            if value is not None:
+                #        header   file  value
+                entry = (header, (None, str(value)))
+                params.append(entry)
 
         #            header    name       data              MIME-type
         params += [ ("files", (str(file), open(file, "rb"), "application/octet-stream")) for file in self.files ]
