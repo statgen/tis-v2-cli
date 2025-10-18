@@ -205,7 +205,7 @@ class TisV2Api:
             response = requests.request(method=method, url=self.base_url + url, headers=headers, **kwargs)
 
         if self.print_http_call:
-            color = ansi_colors.FG_GREEN if (response.status_code == 200) else ansi_colors.FG_RED
+            color = ansi_colors.FG_GREEN if response.ok else ansi_colors.FG_RED
             self.cli.print(f"{color}{response.status_code}{ansi_colors.RESET}")
             self.cli.blank()
 
@@ -234,7 +234,7 @@ class TisV2Api:
         """Lists all jobs submitted by the current user (regardless of current status)."""
         response = self._get(url="api/v2/jobs")
 
-        if response.status_code != 200:
+        if not response.ok:
             return []
 
         json_data = response.json()["data"]
@@ -343,7 +343,7 @@ class TisV2Api:
         for state in states:
             response = self._get(url="api/v2/admin/jobs", params={ "state": state }, admin=True)
 
-            if response.status_code != 200:
+            if not response.ok:
                 return []
 
             json_data = response.json()["data"]
