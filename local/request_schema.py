@@ -86,8 +86,6 @@ class JobParams:
             ("phasing"   , (None, str(self.phasing)  )),
             ("population", (None, self.population    )),
             ("mode"      , (None, str(self.mode)     )),
-            ("check1"    , (None, "accepted"         )),
-            ("check2"    , (None, "accepted"         )),
         ]
 
         #            header    name       data              MIME-type
