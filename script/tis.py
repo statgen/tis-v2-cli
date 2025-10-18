@@ -166,7 +166,7 @@ class AdminLogin(AdminArgs):
 
     def run_command(self, api: TisV2Api) -> None:
         if self.username is None:
-            self.username = input("Username:")
+            self.username = input("Username: ")
         if self.password is None:
             self.password = getpass()
 

@@ -135,7 +135,7 @@ class TisV2Api:
     def _request_token(self, admin: bool, token_file: Path) -> None:
         # TODO: Handle errors and retries?
         if admin:
-            username = input(f"No token file found for admin access to environment '{self.env}'. Will attempt login.\nUsername:")
+            username = input(f"No token file found for admin access to environment '{self.env}'. Will attempt login.\nUsername: ")
             password = getpass()
             response = self.admin_login(username, password)
             token = response.access_token
