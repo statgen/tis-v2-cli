@@ -236,14 +236,17 @@ def parse_arguments() -> Args:
     restart_job.add_argument("job_id", help="ID of the job to retry")
 
     submit_job = subparsers.add_parser(Command.SUBMIT_JOB, help="Submit a job for processing.")
-    submit_job.add_argument("-f", "--file"      , help="VCF file to upload for testing. Repeat for a multi-file upload."      , type=check_file, required=True, action="append")
-    submit_job.add_argument("-r", "--refpanel"  , help="Reference panel used for imputation."                                 , type=str       , required=True)
-    submit_job.add_argument("-b", "--build"     , help="Data format (HG19 vs. HG38)."                                         , type=Build     , default=None)
-    submit_job.add_argument("-n", "--name"      , help="Optional name for this job (will be assigned a unique ID regardless).", type=str       , default=None)
-    submit_job.add_argument("-R", "--r2-filter" , help="rsq filter.                                 "                         , type=float     , default=None)
-    submit_job.add_argument("-p", "--phasing"   , help="Phasing engine to use."                                               , type=Phasing   , default=None)
-    submit_job.add_argument("-P", "--population", help="Reference population used for the allele frequency check."            , type=str       , default="off")
-    submit_job.add_argument("-m", "--mode"      , help="Run QC only, or do QC + Imputation."                                  , type=Mode      , default=None)
+    submit_job.add_argument("-f", "--file"          , help="VCF file to upload for testing. Repeat for a multi-file upload."      , type=check_file, required=True, action="append")
+    submit_job.add_argument("-r", "--refpanel"      , help="Reference panel used for imputation."                                 , type=str       , required=True)
+    submit_job.add_argument("-b", "--build"         , help="Data format (HG19 vs. HG38)."                                         , type=Build     , default=None)
+    submit_job.add_argument("-n", "--name"          , help="Optional name for this job (will be assigned a unique ID regardless).", type=str       , default=None)
+    submit_job.add_argument("-R", "--r2-filter"     , help="rsq filter.                                 "                         , type=float     , default=None)
+    submit_job.add_argument("-p", "--phasing"       , help="Phasing engine to use."                                               , type=Phasing   , default=None)
+    submit_job.add_argument("-P", "--population"    , help="Reference population used for the allele frequency check."            , type=str       , default="off")
+    submit_job.add_argument("-m", "--mode"          , help="Run QC only, or do QC + Imputation."                                  , type=Mode      , default=None)
+    submit_job.add_argument("-e", "--aes-encryption", help="Use AES 256 encryption instead of the default."                       , type=bool      , default=None)
+    submit_job.add_argument("-M", "--meta-file"     , help="Generate a meta-imputation file."                                     , type=bool      , default=None)
+    submit_job.add_argument(      "--password"      , help="Enforce this password for encryption instead of the random default."  , type=str       , default=None)
 
     list_refpanels = subparsers.add_parser(Command.LIST_REFPANELS, help="List the available reference panels in the selected environment.")
 
@@ -299,14 +302,17 @@ def parse_arguments() -> Args:
             refpanel = late_check_refpanel(submit_job, env, args.refpanel)
 
             job_params = JobParams(
-                job_name   = args.name,
-                refpanel   = refpanel,
-                build      = args.build,
-                r2_filter  = args.r2_filter,
-                phasing    = args.phasing,
-                population = args.population,
-                mode       = args.mode,
-                files      = args.file,
+                refpanel       = refpanel,
+                population     = args.population,
+                files          = args.file,
+                job_name       = args.name,
+                build          = args.build,
+                r2_filter      = args.r2_filter,
+                phasing        = args.phasing,
+                mode           = args.mode,
+                aes_encryption = args.aes_encryption,
+                meta           = args.meta,
+                password       = args.password,
             )
 
             return SubmitJobArgs(**global_args, job_params=job_params)
