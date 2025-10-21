@@ -311,7 +311,7 @@ def parse_arguments() -> Args:
                 phasing        = args.phasing,
                 mode           = args.mode,
                 aes_encryption = args.aes_encryption,
-                meta           = args.meta,
+                meta_file      = args.meta_file,
                 password       = args.password,
             )
 

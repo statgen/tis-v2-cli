@@ -76,7 +76,7 @@ class JobParams:
     phasing        : Phasing | None = None
     mode           : Mode    | None = None
     aes_encryption : bool    | None = None
-    meta           : bool    | None = None
+    meta_file      : bool    | None = None
     password       : str     | None = None
 
     def get_params(self) -> list[tuple[str, tuple]]:
@@ -99,13 +99,13 @@ class JobParams:
             "phasing"       : self.phasing,
             "mode"          : self.mode,
             "aesEncryption" : self.aes_encryption,
-            "meta"          : self.meta,
+            "meta"          : self.meta_file,
             "password"      : self.password,
         }
 
         params = []
 
-        for (header, value) in form_fields:
+        for (header, value) in form_fields.items():
             if value is None:
                 continue
 
