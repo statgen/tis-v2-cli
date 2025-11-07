@@ -18,6 +18,9 @@ class RefPanel(StrEnum):
     TOPMED_DEV_TOPMED_R3_DEV  = "topmed-r3"
     TOPMED_DEV_TOPMED_R3_PROD = "topmed-r3-prod"
 
+    # TOPMed staging
+    TOPMED_STAGING_TOPMED_R3 = "topmed-r3"
+
     # TOPMed prod
     TOPMED_PROD_TOPMED_R3 = "topmed-r3"
 

@@ -8,17 +8,19 @@ from local.request_schema import RefPanel
 
 
 class Environment(StrEnum):
-    TOPMED_DEV  = "topmed-dev"
-    TOPMED_PROD = "topmed"
-    MICHIGAN    = "michigan"
-    MCPS        = "mcps"
+    TOPMED_DEV     = "topmed-dev"
+    TOPMED_STAGING = "topmed-staging"
+    TOPMED_PROD    = "topmed"
+    MICHIGAN       = "michigan"
+    MCPS           = "mcps"
 
 
 _BASE_URL = {
-    Environment.TOPMED_DEV  : "https://topmed.dev.imputationserver.org",
-    Environment.TOPMED_PROD : "https://imputation.biodatacatalyst.nhlbi.nih.gov",
-    Environment.MICHIGAN    : "https://imputationserver.sph.umich.edu/",
-    Environment.MCPS        : "https://imputationserver-reg.sph.umich.edu",
+    Environment.TOPMED_DEV     : "https://topmed.dev.imputationserver.org",
+    Environment.TOPMED_STAGING : "https://staging.topmed.imputationserver.org",
+    Environment.TOPMED_PROD    : "https://imputation.biodatacatalyst.nhlbi.nih.gov",
+    Environment.MICHIGAN       : "https://imputationserver.sph.umich.edu/",
+    Environment.MCPS           : "https://imputationserver-reg.sph.umich.edu",
 }
 
 
@@ -35,6 +37,10 @@ _REFPANEL_LOOKUP = {
 
         "r3prod"       : RefPanel.TOPMED_DEV_TOPMED_R3_PROD,
         "topmedr3prod" : RefPanel.TOPMED_DEV_TOPMED_R3_PROD,
+    },
+    Environment.TOPMED_STAGING: {
+        "r3"       : RefPanel.TOPMED_STAGING_TOPMED_R3,
+        "topmedr3" : RefPanel.TOPMED_STAGING_TOPMED_R3,
     },
     Environment.TOPMED_PROD: {
         "r3"       : RefPanel.TOPMED_PROD_TOPMED_R3,
