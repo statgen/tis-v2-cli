@@ -1,6 +1,44 @@
 #!/bin/env python3
 
 
+# =========
+# LOAD TEST
+# =========
+#
+# This script submits a battery of jobs from any number of accounts, with random
+# duration between submissions. The script requires the following arguments:
+#
+# --min-delay <min-delay>
+#       Minimum amount of time each account will wait before submitting a job,
+#       in format `((hh:)mm:)ss`.
+# --max-delay <max-delay>`
+#       Maximum amount of time each account will wait before submitting a job,
+#       in format `((hh:)mm:)ss`.
+# --submissions <num-submissions>
+#       Number of submission attempts that each accounnt will perform.
+# --token-file <path-to-token>
+#       Path to an access token file. This argument can be added repeatedly to
+#       have several accounts submitting in parallel. You can also repeat the
+#       same token path to have a single identity applying several times in parallel.
+# --vcf-file <path-to-vcf>
+#       The VCF file(s) to submit for each job. This argument can be added
+#       repeatedly for multiple-file submissions.
+#
+# Each `--token-file` argument provided spawns a subprocess that will attempt
+# `--submissions` job submissions sequentially before quitting. The subprocess will
+# sleep a random amount of time between `--min-delay` and `--max-delay` before each
+# submission attempt. If more than one `--token-file` argument is provided, they
+# all run in parallel.
+#
+# Example:
+# ```
+# uv run script/load_test.py \
+#     --min-delay 00:00:15 --max-delay 00:20:00 --submissions 5 \
+#     --vcf-file <file-1> ... --vcf-file <file-n> \
+#     --token-file <identity-1> ... --token-file <identity-m>
+# ```
+
+
 import os
 import time
 import random
