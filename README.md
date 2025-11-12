@@ -1,9 +1,11 @@
 # Imputation Server CLI Tool
 
-The Imputation Server tool `./impute` allows you to interact via CLI with the following imputation servers:
+The Imputation Server tool `./impute` allows you to interact via CLI with imputation servers such as:
 
 * [TOPMed Imputation Server](https://imputation.biodatacatalyst.nhlbi.nih.gov)
 * [Michigan Imputation Server](https://imputationserver.sph.umich.edu)
+
+It supports any imputation server running [Cloudgene 3](https://www.cloudgene.io/) and [Imputation Server 2](https://github.com/genepi/imputationserver2). See [Adding Servers](#adding-servers) for details on communicating with other servers.
 
 This repository includes the CLI tool itself, as well as a Python SDK and additional helper scripts.
 
@@ -11,29 +13,36 @@ This repository includes the CLI tool itself, as well as a Python SDK and additi
 
 List all your jobs in the TOPMed server (CLI):
 ```sh
-./impute topmed list-jobs
+./impute job list topmed
 ```
 
 ...or do it in a Python script:
 ```python
-api = TisV2Api(env="topmed")
+from local.api import get_api
+api = get_api("topmed")
 all_jobs = api.list_jobs()
 ```
 
 Get a specific job by its ID in the Michigan server (CLI):
 ```sh
-./impute michigan get-job <job-ID>
+./impute job get michigan <job-ID>
 ```
 
 Python:
 ```python
-api = TisV2API(env="michigan")
+from local.api import get_api
+api = get_api("michigan")
 one_job = api.get_job(job_id)
 ```
 
-Submit a job to a custom server called `mcps`:
+Register a server called `mcps`:
 ```sh
-./impute mcps submit-job \
+./impute server register mcps <url>
+```
+
+Submit a job to the newly registered server:
+```sh
+./impute job submit mcps \
         --name 'My test!' \
         --refpanel topmed-r3 \
         --population all \
@@ -51,9 +60,9 @@ Once you have `uv` installed, navigate to the project root and run:
 uv sync
 ```
 
-And you're good to go:
+And you're good to go! You can see all available commands by running:
 ```sh
-./impute <options...>
+./impute --help
 ```
 
 ## Access Tokens
@@ -72,23 +81,24 @@ A special admin token is needed for some operations. Admin tokens are stored in 
 
 `./impute` is the primary API interaction script. It has a lot of options, so using `--help` to find what you need is recommended.
 
-You always need to specify the target server (e.g., `topmed` or `michigan`). By default, the script expects a text file `data/<server>.token` (e.g., `data/michigan.token`) containing a valid access token for the specified server; a different token file can be specified by passing `--token-file <path-to-token>`
+Many commands require you to specify which server they apply to (e.g., `topmed` or `michigan`). By default, the script expects a text file `data/<server>.token` (e.g., `data/michigan.token`) containing a valid access token for the specified server; a different token file can be specified by passing `--token-file <path-to-token>`
 
-* `./impute <server> list-jobs` lists all your jobs in the selected server, past and present.
-* `./impute <server> get-job <job-id>` gives detailed information about a single job.
-* `./impute <server> submit-job <params...>` submits a job with the provided parameters (some mandatory, some optional; check defaults!)
-* `./impute <server> cancel-job <job-id>` cancels the selected job.
-* `./impute <server> restart-job <job-id>` re-runs the selected job from scratch.
-* `./impute <server> admin <admin-command> ...` calls commands that require admin-level access. See [Access Tokens](#access-tokens) for more details.
-  * `./impute <server> admin login (--username <username) (--password <password>)` gets an admin token from the server.
+* `./impute job <job-command> ...` contains subcommands for interacting with your jobs in a specific server.
+  * `./impute job list <server>` lists all your jobs in the selected server, past and present.
+  * `./impute job get <server> <job-id>` gives detailed information about a single job.
+  * `./impute job submit <server> <params...>` submits a job with the provided parameters (some mandatory, some optional; check defaults!)
+  * `./impute job cancel <server> <job-id>` cancels the selected job.
+  * `./impute job restart <server> <job-id>` re-runs the selected job from scratch.
+* `./impute admin <server> admin <admin-command> ...` contains subcommands that require admin-level access. See [Access Tokens](#access-tokens) for more details.
+  * `./impute admin login <server> (--username <username) (--password <password>)` gets an admin token from the server.
     * We recommend to skip the password argument. You will be prompted securely for a password input.
-  * `./impute <server> admin list-users` lists all users in the given server.
-  * `./impute <server> admin list-jobs --state (running-ltq | current | retired)` lists jobs from all users from a specific set:
+  * `./impute admin list-users <server> admin` lists all users in the given server.
+  * `./impute admin list-jobs <server> admin --state (running-ltq | current | retired)` lists jobs from all users from a specific set:
     * `running-ltq`: the main queue for running jobs.
     * `current`: seems to be the pre-processing queue.
     * `retired`: non-running jobs: finished, cancelled, failed...
     * More than one queue can be requested by repeating the `--state <state>` parameters.
-  * `./impute <server> admin kill-all` cancels all running jobs.
+  * `./impute admin kill-all <server>` cancels all running jobs.
 
 ## SDK
 
@@ -106,3 +116,12 @@ Admin methods:
 * `admin_list_users()`: Calls the admin user listing endpoint.
 * `admin_list_jobs(states)`: Calls the admin job listing endpoint.
 * `admin_kill_all()`: Cancels all running jobs.
+
+## Adding Servers
+
+To register a new server, run:
+```bash
+./impute server register <server-id> <base-url>
+```
+
+Information about all registered servers can be found in `data/servers.yaml`.

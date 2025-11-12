@@ -4,11 +4,9 @@ from pathlib import Path
 from enum import Enum
 from datetime import datetime, timedelta
 from dataclasses import dataclass, asdict, is_dataclass
+from typing import Any, Iterable, Mapping, Sequence
 
 from pretty_cli import PrettyCli
-
-from local.env import Environment, match_refpanel
-from local.request_schema import RefPanel
 
 
 @dataclass
@@ -37,30 +35,72 @@ def get_user_agent() -> str:
     return user_agent
 
 
-def display(cli: PrettyCli, obj) -> None:
+def flatten_for_storage(obj: Any, skip_keys: Iterable[str]) -> Any:
     """
-    Flattens `obj` so arrays are displayed as dicts mapping idx -> entry.
+    Recursively converts dataclass and Mapping instances into dicts; Sequences into lists.
+
+    Normalizes keys to lowercase strings with dash separators.
+
+    Skips any fields whose key (after normalization) is in `skip_keys`.
     """
-    out = asdict(obj)
 
-    def _flatten(d) -> dict:
-        if not isinstance(d, dict):
-            return d
+    skip_keys = set(skip_keys)
 
-        keys = list(d.keys())
+    def process_key(key: Any) -> str:
+        return str(key).strip().lower().replace("_", "-")
 
-        for k in keys:
-            if d[k] is None:
-                del d[k]
-            elif isinstance(d[k], list):
-                if len(d[k]) > 0:
-                    d[k] = { i: _flatten(val) for (i, val) in enumerate(d[k]) }
-                else:
-                    del d[k]
+    def process_mapping(map: Mapping) -> dict[str, Any]:
+        d = dict()
+
+        for (key, value) in map.items():
+            key = process_key(key)
+            if key in skip_keys:
+                continue
+            d[key] = flatten_for_storage(value, skip_keys)
 
         return d
 
-    _flatten(out)
+    if isinstance(obj, str) or isinstance(obj, int) or isinstance(obj, float):
+        # Handled explicitly to avoid recursion issues with str, and to keep it simple on basic types.
+        return obj
+    elif is_dataclass(obj) and not isinstance(obj, type):
+        return process_mapping(asdict(obj))
+    elif isinstance(obj, Mapping):
+        return process_mapping(obj)
+    elif isinstance(obj, Sequence):
+        return [ flatten_for_storage(value, skip_keys) for value in obj ]
+    else:
+        return obj
+
+
+def dictionarize(obj: Any) -> Any:
+    """Recursively converts dataclass, Mapping, and Sequence instances into dicts. Skips `None` entries."""
+
+    def process_key(key: Any) -> str:
+        return str(key).strip()
+
+    def process_mapping(map: Mapping) -> dict[str, Any]:
+        return { process_key(key): dictionarize(value) for (key, value) in map.items() if value is not None }
+
+    if isinstance(obj, str) or isinstance(obj, int) or isinstance(obj, float):
+        # Handled explicitly to avoid recursion issues with str, and to keep it simple on basic types.
+        return obj
+    elif is_dataclass(obj) and not isinstance(obj, type):
+        return process_mapping(asdict(obj))
+    elif isinstance(obj, Mapping):
+        return process_mapping(obj)
+    elif isinstance(obj, Sequence):
+        return process_mapping({ n: value for (n, value) in enumerate(obj) })
+    else:
+        return obj
+
+
+def display(cli: PrettyCli, obj: Any) -> None:
+    """
+    Flattens `obj` so arrays are displayed as dicts mapping idx -> entry.
+    """
+
+    out = dictionarize(obj)
     cli.print(out)
 
 
@@ -112,26 +152,8 @@ def check_datetime(arg_value: str) -> datetime:
         raise argparse.ArgumentTypeError(f"Expected ISO 8601 date-time, but found: {arg_value}")
 
 
-def late_check_refpanel(parser: argparse.ArgumentParser, env: Environment, refpanel: str) -> RefPanel:
-    """
-    Validates the `refpanel` argument based on the passed `env`; used for late argument parsing.
-
-    If the provided `refpanel` argument is a recognized alias for `hapmap-2`, `r3`, or `r3-prod`,
-    returns the corresponding `RefPanel` value. The comparison ignores case, spacing, dashes,
-    and underscores.
-
-    Otherwise, uses the `parser` to raise a "bad formatting" error and exit.
-    """
-    refpanel = match_refpanel(env, refpanel)
-
-    if refpanel is not None:
-        return refpanel
-    else:
-        parser.error(f"-r/--refpanel must be a known environment-specific panel. In environment '{env}', found unrecognized value: {refpanel}")
-
-
 def json_default(value):
-    if is_dataclass(value):
+    if is_dataclass(value) and not isinstance(value, type):
         return asdict(value)
     elif isinstance(value, datetime):
         return value.isoformat(sep=" ")

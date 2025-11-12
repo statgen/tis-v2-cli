@@ -13,13 +13,12 @@ from tqdm import tqdm
 from pretty_cli import PrettyCli
 
 from local import ansi_colors
-from local.env import Environment, get_base_url
 from local.request_schema import JobParams, AdminListJobsState
 from local.response_schema import JobInfo, JobResponse, JobState, UserResponse, LoginResponse, RefpanelResponse, PopulationResponse, DownloadInfo
 from local.util import get_user_agent
 
 
-def get_bar(desc: str, total: int) -> tqdm:
+def _get_bar(desc: str, total: int) -> tqdm:
     return tqdm(desc=desc, total=total, unit="B", unit_scale=True, unit_divisor=1024)
 
 
@@ -53,9 +52,9 @@ class TisV2Api:
     * `admin_kill_all()`: Cancels all running jobs.
     """
 
-    env          : Environment
-    cli          : PrettyCli
+    env_name     : str
     base_url     : str
+    cli          : PrettyCli
     user_agent   : str
 
     token_file       : Path | None
@@ -70,7 +69,8 @@ class TisV2Api:
     print_response_body    : bool
 
     def __init__(self,
-        env                    : Environment              ,
+        env_name               : str                      ,
+        base_url               : str                      ,
         cli                    : PrettyCli   = PrettyCli(),
         print_http_call        : bool        = True       ,
         print_response_body    : bool        = False      ,
@@ -80,8 +80,8 @@ class TisV2Api:
         token_file             : Path | None = None       ,
         admin_token_file       : Path | None = None       ,
     ) -> None:
-        self.env = env
-        self.cli = cli
+        self.base_url = base_url
+        self.cli      = cli
 
         self.token_file       = token_file
         self.admin_token_file = admin_token_file
@@ -92,7 +92,6 @@ class TisV2Api:
         self.print_response_headers = print_response_headers
         self.print_response_body    = print_response_body
 
-        self.base_url = get_base_url(env)
         self.user_agent = get_user_agent()
 
         self.access_token = None
@@ -114,7 +113,7 @@ class TisV2Api:
             if not data_dir.exists():
                 data_dir.mkdir(parents=False, exist_ok=False)
 
-            full_env = f"{self.env}{'-admin' if admin else ''}"
+            full_env = f"{self.env_name}{'-admin' if admin else ''}"
             token_file = data_dir / f"{full_env}.token"
 
             if not token_file.is_file():
@@ -135,12 +134,12 @@ class TisV2Api:
     def _request_token(self, admin: bool, token_file: Path) -> None:
         # TODO: Handle errors and retries?
         if admin:
-            username = input(f"No token file found for admin access to environment '{self.env}'. Will attempt login.\nUsername: ")
+            username = input(f"No token file found for admin access to environment '{self.env_name}'. Will attempt login.\nUsername: ")
             password = getpass()
             response = self.admin_login(username, password)
             token = response.access_token
         else:
-            token = input(f"No token file found for current environment '{self.env}'. Please enter a valid token:")
+            token = input(f"No token file found for current environment '{self.env_name}'. Please enter a valid token:")
 
         with open(token_file, "w") as file_handle:
             file_handle.write(token)
@@ -190,7 +189,7 @@ class TisV2Api:
 
             assert total_size > 0
 
-            with get_bar(desc="Upload", total=total_size) as bar:
+            with _get_bar(desc="Upload", total=total_size) as bar:
                 def callback(monitor: MultipartEncoderMonitor) -> None:
                     new_bytes = monitor.bytes_read - bar.n
                     bar.update(new_bytes)
@@ -310,7 +309,7 @@ class TisV2Api:
                 with self._get(url=download_url, stream=True) as download_response:
                     download_response.raise_for_status()
                     with open(out_file, "wb") as file_handle:
-                        with get_bar(desc=file.name, total=file.size) as bar:
+                        with _get_bar(desc=file.name, total=file.size) as bar:
                             for chunk in download_response.iter_content(chunk_size=8192):
                                 file_handle.write(chunk)
                                 bar.update(len(chunk))
@@ -321,12 +320,14 @@ class TisV2Api:
 
     def admin_login(self, username: str, password: str) -> LoginResponse:
         """Requests an admin-level token from the server."""
+
         # TODO: Optionally save the token to disk.
         response = self._post(url="login", data={ "username": username, "password": password })
         return LoginResponse.from_json(response.json())
 
     def admin_list_users(self) -> list[UserResponse]:
         """Calls the admin user listing endpoint. Requires admin rights."""
+
         response = self._get(url="api/v2/admin/users", admin=True)
 
         if response.ok:
@@ -337,7 +338,11 @@ class TisV2Api:
             return []
 
     def admin_list_jobs(self, states: Iterable[AdminListJobsState]) -> list[JobInfo]:
-        """Calls the admin job listing endpoint. Requires at least one state filter to produce output (see `AdminListJobsState`). Requires admin rights."""
+        """
+        Calls the admin job listing endpoint. Requires at least one state filter to produce
+        output (see `AdminListJobsState`). Requires admin rights.
+        """
+
         jobs = []
 
         for state in states:

@@ -211,8 +211,8 @@ class UserResponse:
     id              : int
     username        : str
     full_name       : str | None
-    last_login      : datetime
-    locked_until    : datetime
+    last_login      : datetime | None
+    locked_until    : datetime | None
     active          : bool
     login_attempts  : int
     role            : list[str]
@@ -227,8 +227,8 @@ class UserResponse:
             id              = int(data["id"]),
             username        = _str_required(data["username"]),
             full_name       =  _str_or_none(data, "fullName"),
-            last_login      = _require_timestamp(data["lastLogin"]),
-            locked_until    = _require_timestamp(data["lockedUntil"]),
+            last_login      = _timestamp_or_none(data["lastLogin"]),
+            locked_until    = _timestamp_or_none(data["lockedUntil"]),
             active          = bool(data["active"]),
             login_attempts  = int(data["loginAttempts"]),
             role            = str(data["role"]).split(","),
