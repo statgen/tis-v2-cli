@@ -1,3 +1,8 @@
+"""
+Provides dataclasses `Server`, `RefPanel`, and `Population`, as well as `normalize_name()` for ID matching.
+"""
+
+
 from dataclasses import dataclass
 
 
@@ -15,7 +20,6 @@ class RefPanel:
 
     def get_population(self, population: str) -> Population:
         # ASSUMPTION: Population IDs are ALWAYS in normalized form!
-
         population_norm = normalize_name(population)
 
         if not population_norm in self.populations:

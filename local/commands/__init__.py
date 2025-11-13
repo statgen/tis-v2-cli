@@ -1,3 +1,8 @@
+"""
+Provides everything needed to run commands from the CLI.
+"""
+
+
 import argparse
 
 from pretty_cli import PrettyCli

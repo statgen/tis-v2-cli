@@ -1,3 +1,8 @@
+"""
+Provides admin-level commands.
+"""
+
+
 from getpass import getpass
 from datetime import datetime
 from pathlib import Path

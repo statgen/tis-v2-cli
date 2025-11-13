@@ -1,3 +1,9 @@
+"""
+Provides server lookup and registration utilities:
+    * `get_all_servers()`, `get_server()`.
+"""
+
+
 from pathlib import Path
 from typing import Any
 
@@ -7,7 +13,7 @@ from local.api.base import TisV2Api
 from local.util import flatten_for_storage
 
 from .base import Population, RefPanel, Server, normalize_name
-from .default import register_defaults
+from .register import register_defaults
 
 
 _servers       : dict[str, Server] | None = None # Canonical mapping: (original ID) -> server
@@ -26,8 +32,9 @@ def _get_dict_field(dictionary: dict[str, Any], key: str, value_type: type, key_
     return value
 
 
-def load_servers() -> None:
+def _load_servers() -> None:
     """Loads server data from file."""
+
     new_servers       : dict[str, Server] = dict()
     new_server_lookup : dict[str, Server] = dict()
     server_ids        : set[str]          = set()
@@ -198,7 +205,7 @@ def _check_servers() -> None:
     """If `_servers` is still `None`, call `load_servers()`."""
     if _servers is None:
         assert _server_lookup is None # If _servers is not loaded, _server_lookup should also not be loaded.
-        load_servers()
+        _load_servers()
 
     assert _servers is not None # load_servers() should throw or load.
     assert _server_lookup is not None # load_servers() should throw or load.
@@ -237,53 +244,3 @@ def _dump_servers_to_file() -> None:
 
     with open(servers_file, "w") as file_handle:
         yaml.safe_dump(server_data, file_handle)
-
-
-def _register_server_internal(id: str, url: str) -> Server:
-    """Internal version of `register_server()`. Skips server data initialization and dumping to file."""
-    assert _servers is not None
-    assert _server_lookup is not None
-
-    normalized = normalize_name(id)
-
-    if normalized in _server_lookup:
-        raise ValueError(f"New ID '{id}' already associated with a server (normalized form: '{normalized}'). Aborting server registration.")
-
-    api = TisV2Api(env_name=id, base_url=url)
-
-    refpanel_response = api.list_refpanels()
-
-    processed_refpanels : dict[str, RefPanel] = dict()
-    refpanel_lookup     : dict[str, RefPanel] = dict()
-
-    for raw in refpanel_response:
-        populations = { pop.api_name: Population(id=pop.api_name, display_name=pop.display_name) for pop in raw.populations }
-        processed = RefPanel(id=raw.api_name, aliases=[], populations=populations)
-
-        assert processed.id not in processed_refpanels
-        processed_refpanels[processed.id] = processed
-
-        normalized_repanel_id = normalize_name(processed.id)
-        assert normalized_repanel_id not in refpanel_lookup
-        refpanel_lookup[normalized_repanel_id] = processed
-
-    server = Server(
-        id              = id,
-        url             = url,
-        aliases         = [],
-        refpanels       = processed_refpanels,
-        refpanel_lookup = refpanel_lookup,
-    )
-
-    _servers[id] = server
-    _server_lookup[normalized] = server
-
-    return server
-
-
-def register_server(id: str, url: str) -> Server:
-    """Adds an entry with the given ID and base URL to the server registry. Calls the server to fill in the refpanel basics."""
-    _check_servers()
-    server = _register_server_internal(id, url)
-    _dump_servers_to_file()
-    return server

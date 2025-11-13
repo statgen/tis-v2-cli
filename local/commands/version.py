@@ -1,3 +1,8 @@
+"""
+Provides the `version` command to print this tool's version.
+"""
+
+
 from dataclasses import dataclass, asdict
 from typing import Any
 

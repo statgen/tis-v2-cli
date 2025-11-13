@@ -80,6 +80,7 @@ class TisV2Api:
         token_file             : Path | None = None       ,
         admin_token_file       : Path | None = None       ,
     ) -> None:
+        self.env_name = env_name
         self.base_url = base_url
         self.cli      = cli
 

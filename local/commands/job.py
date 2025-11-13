@@ -1,3 +1,8 @@
+"""
+Provides user-level commands for interacting with the user's own jobs.
+"""
+
+
 from datetime import datetime
 from pathlib import Path
 from enum import StrEnum

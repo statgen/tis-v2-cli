@@ -1,3 +1,8 @@
+"""
+Provides base definitions used by all commands.
+"""
+
+
 import json
 import argparse
 from datetime import datetime

@@ -1,3 +1,8 @@
+"""
+Provides commands for registering and managing servers.
+"""
+
+
 from enum import StrEnum
 from dataclasses import dataclass, asdict
 from typing import Any
@@ -5,7 +10,6 @@ from typing import Any
 from pretty_cli import PrettyCli
 
 from local import server
-from local.api import TisV2Api
 
 from . import base
 
