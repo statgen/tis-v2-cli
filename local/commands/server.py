@@ -3,6 +3,7 @@ Provides commands for registering and managing servers.
 """
 
 
+import sys
 from enum import StrEnum
 from dataclasses import dataclass, asdict
 from typing import Any
@@ -30,14 +31,42 @@ class ServerRegister(ServerArgs):
     url : str
 
     def run_command(self, cli: PrettyCli) -> None:
-        raise Exception("TODO: NOT IMPLEMENTED YET!")
+        try:
+
+            new_server = server.register_server(self.id, self.url) # Add stub to config
+            new_server = server.get_server(new_server.id) # Force reaching out to server for initialization.
+
+            display = server.display_server(new_server)
+            self.output(cli, display)
+
+        except ValueError as e:
+            self.output(cli, e)
+            sys.exit(1)
+
 
 
 @dataclass
 class ServerShow(ServerArgs):
+    name: str | None
+
     def run_command(self, cli: PrettyCli) -> None:
-        servers = server.get_all_servers()
-        self.output(cli, servers)
+        name = self.name if self.name is not None else ""
+        name = server.normalize_name(name)
+
+        try:
+
+            if len(name) > 0:
+                details = server.get_server(name)
+                display = server.display_server(details)
+            else:
+                all_servers = server.get_all_servers()
+                display = { id: server.display_server(details) for (id, details) in all_servers.items() }
+
+            self.output(cli, display)
+
+        except ValueError as e:
+            self.output(cli, e)
+            sys.exit(1)
 
 
 def register_server_parser(subparsers: base.Subparser) -> None:
@@ -45,6 +74,7 @@ def register_server_parser(subparsers: base.Subparser) -> None:
     server_parsers = server.add_subparsers(title="Server Commands", dest="server_command", required=True)
 
     server_show = server_parsers.add_parser(ServerCommand.SHOW, help="Show registered servers.")
+    server_show.add_argument("name", help="ID or alias of a server, shows only info about this server.", type=str, nargs="?")
 
     server_register = server_parsers.add_parser(ServerCommand.REGISTER, help="Register a new server.")
     server_register.add_argument("name", help="Primary ID to identify this server.", type=str)
@@ -59,8 +89,8 @@ def parse_server_command(raw_args: Any, global_args: base.Args) -> ServerArgs:
 
     match server_command:
         case ServerCommand.REGISTER:
-            return ServerRegister(**dict_args, id=raw_args.id, url=raw_args.url)
+            return ServerRegister(**dict_args, id=raw_args.name, url=raw_args.url)
         case ServerCommand.SHOW:
-            return ServerShow(**dict_args)
+            return ServerShow(**dict_args, name=raw_args.name)
 
     assert False, f"Unrecognized server command: {server_command}"
