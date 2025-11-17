@@ -3,6 +3,7 @@ Provides dataclasses `Server`, `RefPanel`, and `Population`, as well as `normali
 """
 
 
+from datetime import datetime
 from dataclasses import dataclass
 
 
@@ -33,6 +34,7 @@ class Server:
     id              : str
     url             : str
     aliases         : list[str]
+    last_updated    : datetime
     refpanels       : dict[str, RefPanel] # Canonical mapping: (original ID) -> RefPanel
     refpanel_lookup : dict[str, RefPanel] # Lookup: (any possible NORMALIZED name) -> RefPanel
 

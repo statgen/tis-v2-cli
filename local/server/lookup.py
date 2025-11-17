@@ -4,16 +4,16 @@ Provides server lookup and registration utilities:
 """
 
 
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from local.api.base import TisV2Api
 from local.util import flatten_for_storage
 
 from .base import Population, RefPanel, Server, normalize_name
-from .register import register_defaults
+from .register import register_defaults, maybe_update_server
 
 
 _servers       : dict[str, Server] | None = None # Canonical mapping: (original ID) -> server
@@ -99,6 +99,8 @@ def _load_servers() -> None:
 
         server_url = _get_server_field(key="url", value_type=str)
 
+        last_updated = _get_server_field(key="last-updated", value_type=datetime)
+
         server_aliases = _get_server_field(key="aliases", value_type=list)
 
         for alias in server_aliases:
@@ -155,6 +157,12 @@ def _load_servers() -> None:
             for population_id, population_details in refpanel_populations.items():
                 assert isinstance(population_id, str), f"Server '{server_id}'; refpanel: '{refpanel_id}': population_id should be a string. Found type: {type(population_id)} (value: {population_id})" # We assume it's true
 
+                # NOTE: In other parts of the code we assume that population IDs are in normalized form.
+                #       This seems to be always true in Cloudgene 3 servers, but it's good to verify our assumptions (esp. in human-editable sources like YAML).
+                population_id_norm = normalize_name(population_id)
+                if not population_id_norm == population_id:
+                    raise Exception(f"Server '{server_id}'; refpanel: '{refpanel_id}': population '{population_id}': expected population ID to be in normalized form, but it's not (normalized form: '{population_id_norm}')")
+
                 if not isinstance(population_details, dict):
                     raise Exception(f"Server '{server_id}'; refpanel: '{refpanel_id}': population '{population_id}' should be a dict. Type found: {type(population_details)}")
 
@@ -182,7 +190,7 @@ def _load_servers() -> None:
                 assert alias_norm not in refpanel_lookup
                 refpanel_lookup[alias_norm] = refpanel
 
-        server = Server(id=server_id, url=server_url, aliases=server_aliases, refpanels=processed_refpanels, refpanel_lookup=refpanel_lookup)
+        server = Server(id=server_id, url=server_url, aliases=server_aliases, last_updated=last_updated, refpanels=processed_refpanels, refpanel_lookup=refpanel_lookup)
 
         assert server_id not in new_servers # Sanity check
         new_servers[server_id] = server
@@ -211,25 +219,40 @@ def _check_servers() -> None:
     assert _server_lookup is not None # load_servers() should throw or load.
 
 
-def get_all_servers() -> dict[str, Server]:
-    """Returns a dict mapping (canonical server ID) -> (`Server` data structure) for all registered servers."""
-    _check_servers()
-    return _servers
-
-
 def get_server(name: str) -> Server:
-    """Matches `name` with any ID or alias from the registered servers. Raises an exception if no match is found."""
+    """
+    Matches `name` with any ID or alias from the registered servers. Raises an exception if no match is found.
+    """
+
     _check_servers()
+    assert _server_lookup is not None
 
     name_norm = normalize_name(name)
 
     if not name_norm in _server_lookup:
         raise ValueError(f"Server not recognized: '{name}' (normalized form: '{name_norm}'). Available values: {[ k for k in _server_lookup.keys() ]}")
 
-    return _server_lookup[name_norm]
+    server = _server_lookup[name_norm]
+    updated = maybe_update_server(server)
+
+    if updated:
+        dump_servers_to_file()
+
+    return server
 
 
-def _dump_servers_to_file() -> None:
+def get_all_servers() -> dict[str, Server]:
+    """
+    Returns a dict mapping (canonical server ID) -> (`Server` data structure) for all registered servers.
+    """
+
+    _check_servers()
+    assert _servers is not None
+
+    return { id: get_server(id) for id in _servers }
+
+
+def dump_servers_to_file() -> None:
     """Saves the in-memory server data to the server configuration file."""
     assert _servers is not None
     assert _server_lookup is not None
