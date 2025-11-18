@@ -44,6 +44,8 @@ class TisV2Api:
     * `submit_job(params)`: Submits a job for processing.
     * `cancel_job(id)`: Cancels the specified job.
     * `restart_job(id)`: Retries the specified job.
+    * `list_refpanels()`: Lists all refpanels in the server, including details such as the available populations.
+    * `download(download_dir, job_id)`: Downloads all files associated with the provided `job_id`, and saves them in `download_dir/<job-id>`
 
     Admin methods:
     * `admin_login(username, password)`: Requests an admin-level token from the server.
@@ -268,6 +270,7 @@ class TisV2Api:
         return JobResponse.from_json(response.json())
 
     def list_refpanels(self) -> list[RefpanelResponse]:
+        """Lists all refpanels in the server, including details such as the available populations."""
         response = self._get(url="api/v2/server/apps/imputationserver2")
         data = response.json()
 
@@ -283,6 +286,7 @@ class TisV2Api:
         return refpanels
 
     def download(self, download_dir: Path, job_id: str) -> list[DownloadInfo]:
+        """Downloads all files associated with the provided `job_id`, and saves them in `download_dir/<job-id>`"""
         out_dir = download_dir / job_id
         out_dir = out_dir.resolve()
 
