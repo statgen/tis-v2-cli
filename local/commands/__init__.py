@@ -18,9 +18,9 @@ def parse_arguments() -> base.Args:
     subparsers = parser.add_subparsers(title="Commands", dest="command", required=True)
 
     version.register_version_parser(subparsers)
+    server.register_server_parser(subparsers)
     job.register_job_parser(subparsers)
     admin.register_admin_parser(subparsers)
-    server.register_server_parser(subparsers)
 
     raw_args = parser.parse_args()
 
@@ -36,12 +36,14 @@ def parse_arguments() -> base.Args:
     match command:
         case base.Command.VERSION:
             return version.parse_version_command(raw_args, global_args)
+        case base.Command.SERVER:
+            return server.parse_server_command(raw_args, global_args)
         case base.Command.JOB:
             return job.parse_job_command(raw_args, global_args)
         case base.Command.ADMIN:
             return admin.parse_admin_command(raw_args, global_args)
-        case base.Command.SERVER:
-            return server.parse_server_command(raw_args, global_args)
+        case _:
+            raise ValueError(f"Unrecognized command: {command}")
 
     assert False, f"Unrecognized command: {command}"
 
