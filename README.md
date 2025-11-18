@@ -83,13 +83,18 @@ A special admin token is needed for some operations. Admin tokens are stored in 
 
 Many commands require you to specify which server they apply to (e.g., `topmed` or `michigan`). By default, the script expects a text file `data/<server>.token` (e.g., `data/michigan.token`) containing a valid access token for the specified server; a different token file can be specified by passing `--token-file <path-to-token>`
 
-* `./impute job <job-command> ...` contains subcommands for interacting with your jobs in a specific server.
-  * `./impute job list <server>` lists all your jobs in the selected server, past and present.
-  * `./impute job get <server> <job-id>` gives detailed information about a single job.
+* `./impute version` prints the utility's version.
+* `./impute server` contains subcommands for managing available servers.
+  * `./impute server register <name> <url>` adds a server registry entry mapping the provided `name` (must be unique) to the provided `url`. The server is queried for basic information.
+  * `./impute server show (name)` lists complete information about all registered servers (if `name` is not provided), or about the selected server (if `name` is provided).
+* `./impute job` contains subcommands for interacting with your jobs in a specific server.
   * `./impute job submit <server> <params...>` submits a job with the provided parameters (some mandatory, some optional; check defaults!)
+  * `./impute job download <server> <job-id>` downloads all files for the given job.
+  * `./impute job get <server> <job-id>` gives detailed information about a single job.
+  * `./impute job list <server>` lists all your jobs in the selected server, past and present.
   * `./impute job cancel <server> <job-id>` cancels the selected job.
   * `./impute job restart <server> <job-id>` re-runs the selected job from scratch.
-* `./impute admin <server> admin <admin-command> ...` contains subcommands that require admin-level access. See [Access Tokens](#access-tokens) for more details.
+* `./impute admin` contains subcommands that require admin-level access. See [Access Tokens](#access-tokens) for more details.
   * `./impute admin login <server> (--username <username) (--password <password>)` gets an admin token from the server.
     * We recommend to skip the password argument. You will be prompted securely for a password input.
   * `./impute admin list-users <server> admin` lists all users in the given server.
@@ -110,6 +115,8 @@ User methods:
 * `submit_job(params)`: Submits a job for processing.
 * `cancel_job(id)`: Cancels the specified job.
 * `restart_job(id)`: Retries the specified job.
+* `list_refpanels()`: Lists all refpanels in the server, including details such as the available populations.
+* `download(download_dir, job_id)`: Downloads all files associated with the provided `job_id`, and saves them in `download_dir/<job-id>`
 
 Admin methods:
 * `admin_login(username, password)`: Requests an admin-level token from the server.
@@ -124,4 +131,6 @@ To register a new server, run:
 ./impute server register <server-id> <base-url>
 ```
 
-Information about all registered servers can be found in `data/servers.yaml`.
+Information about all registered servers can be found in `data/servers.yaml`. The provided `server-id` must be unique (up to normalization), and not clash with any registered aliases. The `base-url` must correspond to a Cloudgene server, e.g., <https://imputation.biodatacatalyst.nhlbi.nih.gov> for the TOPMed Imputation Server.
+
+When a new server is registered, it is called to get information on its reference panels, and the available population options in each reference panel.
