@@ -14,8 +14,7 @@ from . import lookup, base
 
 
 DEFAULT_SERVERS = {
-    "topmed-dev" : "https://topmed.dev.imputationserver.org",
-    # "topmed"   : "https://imputation.biodatacatalyst.nhlbi.nih.gov",
+    "topmed"   : "https://imputation.biodatacatalyst.nhlbi.nih.gov",
     "michigan" : "https://imputationserver.sph.umich.edu",
 }
 
