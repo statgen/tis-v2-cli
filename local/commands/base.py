@@ -73,7 +73,7 @@ class ApiArgs(Args):
             print_response_headers = self.debug,
             print_response_body    = self.debug,
 
-            token_file = self.token_file,
+            access_token_path = self.token_file,
         )
 
         self.run_subcommand(api)

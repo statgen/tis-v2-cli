@@ -59,10 +59,10 @@ class TisV2Api:
     cli          : PrettyCli
     user_agent   : str
 
-    token_file       : Path | None
-    admin_token_file : Path | None
-    access_token     : str  | None
-    admin_token      : str  | None
+    access_token_path : Path | None
+    admin_token_path  : Path | None
+    access_token      : str  | None
+    admin_token       : str  | None
 
     print_http_call        : bool
     print_request_headers  : bool
@@ -79,15 +79,15 @@ class TisV2Api:
         print_request_headers  : bool        = False      ,
         print_request_body     : bool        = False      ,
         print_response_headers : bool        = False      ,
-        token_file             : Path | None = None       ,
-        admin_token_file       : Path | None = None       ,
+        access_token_path      : Path | None = None       ,
+        admin_token_path       : Path | None = None       ,
     ) -> None:
         self.env_name = env_name
         self.base_url = base_url
         self.cli      = cli
 
-        self.token_file       = token_file
-        self.admin_token_file = admin_token_file
+        self.access_token_path = access_token_path
+        self.admin_token_path  = admin_token_path
 
         self.print_http_call        = print_http_call
         self.print_request_headers  = print_request_headers
@@ -100,42 +100,79 @@ class TisV2Api:
         self.access_token = None
         self.admin_token  = None
 
-    def _get_access_token(self, admin: bool = False) -> str:
-        token = self.admin_token if admin else self.access_token
+    def _get_token_path(self, admin: bool = False) -> Path:
+        """
+        Returns the expected path to the token file:
+
+        1. The returned path depends on `admin` (`access_token_path` for regular operations or `admin_token_path` for admin-protected operations).
+        2. If a path was passed to the constructor or set in an earlier call, we respect the existing path.
+        3. If no previous path exists, we create the `data/` folder if necessary, and return a path to the (possibly non-existent) standard path `data/<server>(-admin)?.token`
+        4. For pre-existing files, we assert that they are actually present in the specified path. A `ValueError` is raised otherwise.
+        5. For new / speculative files, the path is stored on the respective field.
+        """
+
+        token_path = self.admin_token_path if admin else self.access_token_path
+
+        if token_path is not None:
+            if not token_path.is_file():
+                raise ValueError(f"A path to a token file was provided, but the file does not exist: {token_path}")
+        else:
+            data_dir = Path("data/")
+            if not data_dir.is_dir():
+                data_dir.mkdir(parents=False, exist_ok=False)
+
+            full_env = f"{self.env_name}{'-admin' if admin else ''}"
+            token_path = data_dir / f"{full_env}.token"
+
+        if admin:
+            self.admin_token_path = token_path
+        else:
+            self.access_token_path = token_path
+
+        return token_path
+
+    def _get_access_token(self, admin: bool = False, force_refresh: bool = False) -> str:
+        """
+        Returns the access token needed for all requests.
+
+        * User-level tokens are cached in `access_token`; admin-level tokens are cached in `admin_token`.
+        * If no cache is found but a token file exists in the path returned by `_get_token_path()`, the token is read from the file.
+        * If none of the above is true, `_request_token()` is invoked to ask the user for a new token, or to perform interactive admin login.
+        * If `force_refresh=True`, caches and pre-existing files are discarded in favor of requesting a new token.
+        """
+
+        if force_refresh:
+            token = None
+        elif admin:
+            token = self.admin_token
+        else:
+            token = self.access_token
 
         if token is not None:
             return token
 
-        token_file = self.admin_token_file if admin else self.token_file
+        token_path = self._get_token_path(admin)
 
-        if token_file is not None:
-            if not token_file.is_file():
-                raise ValueError(f"A path to a token file was provided, but the file does not exist: {token_file}")
-        else:
-            data_dir = Path("data/")
-            if not data_dir.exists():
-                data_dir.mkdir(parents=False, exist_ok=False)
+        if force_refresh or (not token_path.is_file()):
+            self._request_token(admin, token_path)
 
-            full_env = f"{self.env_name}{'-admin' if admin else ''}"
-            token_file = data_dir / f"{full_env}.token"
-
-            if not token_file.is_file():
-                self._request_token(admin, token_file)
-
-        with open(token_file, "r") as file_handle:
+        with open(token_path, "r") as file_handle:
             token = file_handle.read().strip()
 
         if admin:
             self.admin_token = token
-            self.admin_token_file = token_file
         else:
             self.access_token = token
-            self.token_file = token_file
 
         return token
 
-    def _request_token(self, admin: bool, token_file: Path) -> None:
-        # TODO: Handle errors and retries?
+    def _request_token(self, admin: bool, token_path: Path) -> None:
+        """
+        Interactively obtains a new token.
+
+        * For user-level operations, asks the user to input an access token (as obtained from the web UI).
+        * For admin-level operations, performs interactive login to obtain a short-lived full-rights token.
+        """
         if admin:
             username = input(f"No token file found for admin access to environment '{self.env_name}'. Will attempt login.\nUsername: ")
             password = getpass()
@@ -144,12 +181,30 @@ class TisV2Api:
         else:
             token = input(f"No token file found for current environment '{self.env_name}'. Please enter a valid token:")
 
-        with open(token_file, "w") as file_handle:
+        with open(token_path, "w") as file_handle:
             file_handle.write(token)
 
-    def _request(self, method: str, url: str, monitor_progress: bool = False, **kwargs) -> requests.Response:
+    def _request(self, **kwargs) -> requests.Response:
         """
-        Internal method used to handle all requests.
+        Internal method used to handle all HTTP requests.
+
+        * Wraps `self._request_internal(...)`. See that method for most of the hard work.
+        * If authorization fails, attempts re-authorization exactly once.
+        """
+        response = self._request_internal(**kwargs)
+
+        if response.status_code == 401:
+            admin = kwargs["admin"] if ("admin" in kwargs) else False
+            assert isinstance(admin, bool)
+
+            self._get_access_token(admin=admin, force_refresh=True)
+            response = self._request_internal(**kwargs)
+
+        return response
+
+    def _request_internal(self, method: str, url: str, monitor_progress: bool = False, **kwargs) -> requests.Response:
+        """
+        Internal method called by `self._request()`. Use `self._request()` for all internal HTTP requests.
 
         * Wraps `requests.request(...)` and handles setting the base URL and the access header.
         * Always prints HTTP method, relative URL, and response status code.
@@ -270,8 +325,15 @@ class TisV2Api:
         return JobResponse.from_json(response.json())
 
     def list_refpanels(self) -> list[RefpanelResponse]:
-        """Lists all refpanels in the server, including details such as the available populations."""
+        """
+        Lists all refpanels in the server, including details such as the available populations.
+        """
+
         response = self._get(url="api/v2/server/apps/imputationserver2")
+
+        if not response.ok:
+            return []
+
         data = response.json()
 
         refpanel_data       = next(entry for entry in data["params"] if entry["id"] == "refpanel")
@@ -286,7 +348,10 @@ class TisV2Api:
         return refpanels
 
     def download(self, download_dir: Path, job_id: str) -> list[DownloadInfo]:
-        """Downloads all files associated with the provided `job_id`, and saves them in `download_dir/<job-id>`"""
+        """
+        Downloads all files associated with the provided `job_id`, and saves them in `download_dir/<job-id>`
+        """
+
         out_dir = download_dir / job_id
         out_dir = out_dir.resolve()
 
