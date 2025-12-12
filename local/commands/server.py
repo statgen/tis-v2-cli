@@ -54,7 +54,6 @@ class ServerShow(ServerArgs):
         name = server.normalize_name(name)
 
         try:
-
             if len(name) > 0:
                 details = server.get_server(name)
                 display = server.display_server(details)

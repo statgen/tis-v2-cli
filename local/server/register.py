@@ -31,7 +31,6 @@ def force_server_update(server: base.Server) -> None:
     # TODO: We should propagate `cli` and verbosity params from upstream!
     api = TisV2Api(env_name=server.id, base_url=server.url)
     refpanel_response = api.list_refpanels()
-    assert len(refpanel_response) > 0
 
     processed_refpanels : dict[str, base.RefPanel] = dict()
     refpanel_lookup     : dict[str, base.RefPanel] = dict()

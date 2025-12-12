@@ -27,6 +27,7 @@ class Command(StrEnum):
     JOB     = "job"
     ADMIN   = "admin"
     SERVER  = "server"
+    QUERY   = "query"
 
 
 class OutputStyle(StrEnum):

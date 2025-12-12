@@ -294,6 +294,97 @@ class RefpanelResponse:
         )
 
 
+@dataclass
+class ServerAppResponse:
+    id      : str
+    name    : str
+    version : str
+
+    @staticmethod
+    def from_json(data) -> "ServerAppResponse":
+        return ServerAppResponse(
+            id      = _str_required(data["id"]),
+            name    = _str_required(data["name"]),
+            version = _str_required(data["version"]),
+        )
+
+
+@dataclass
+class ServerNavigationResponse:
+    id    : str
+    name  : str
+    link  : str
+    items : Any # TODO: What goes here?
+
+    @staticmethod
+    def from_json(data) -> "ServerNavigationResponse":
+        return ServerNavigationResponse(
+            id    = _str_required(data["id"]),
+            name  = _str_required(data["name"]),
+            link  = _str_required(data["link"]),
+            items = data["items"],
+        )
+
+
+# NOTE: This is ALMOST a subset of UserResponse, but they mess it up by changing username -> name
+@dataclass
+class ServerUserResponse:
+    username : str
+    mail     : str | None
+    admin    : bool
+    name     : str | None
+
+    @staticmethod
+    def from_json(data) -> "ServerUserResponse":
+        return ServerUserResponse(
+            username = _str_required(data["username"]),
+            mail     = _str_or_none(data, "mail"),
+            admin    = bool(data["admin"]),
+            name     = _str_or_none(data, "name"),
+        )
+
+
+@dataclass
+class ServerResponse:
+    name                           : str
+    background                     : str
+    foreground                     : str
+    footer                         : str
+    email_required                 : bool
+    user_email_description         : str
+    user_without_email_description : str
+    oauth                          : list[Any] | None # TODO: List of what???
+    user                           : ServerUserResponse | None
+    apps                           : list[ServerAppResponse] | None
+    deprecated_apps                : list[ServerAppResponse] | None
+    experimental_apps              : list[ServerAppResponse] | None
+    logged_in                      : bool
+    navigation                     : list[ServerNavigationResponse] | None
+    maintenance                    : bool
+    maintenance_message            : str | None
+
+    @staticmethod
+    def from_json(data) -> "ServerResponse":
+        return ServerResponse(
+            name                           = _str_required(data["name"]),
+            background                     = _str_required(data["background"]),
+            foreground                     = _str_required(data["foreground"]),
+            footer                         = _str_required(data["footer"]),
+            email_required                 = bool(data["emailRequired"]),
+            user_email_description         = _str_required(data["userEmailDescription"]),
+            user_without_email_description = _str_required(data["userWithoutEmailDescription"]),
+            oauth                          = data["oauth"],
+            user                           = ServerUserResponse.from_json(data["user"]) if "user" in data else None,
+            apps                           = _process_list(data["apps"], ServerAppResponse.from_json),
+            deprecated_apps                = _process_list(data["deprecatedApps"], ServerAppResponse.from_json),
+            experimental_apps              = _process_list(data["experimentalApps"], ServerAppResponse.from_json),
+            logged_in                      = bool(data["loggedIn"]),
+            navigation                     = _process_list(data["navigation"], ServerNavigationResponse.from_json),
+            maintenance                    = bool(data["maintenace"]), # NOTE: Variable name is mistyped in response body.
+            maintenance_message            = _str_or_none(data, "maintenaceMessage"), # NOTE: Variable name is mistyped in response body.
+        )
+
+
 def _str_or_none(d: dict[str, Any], k: str) -> str | None:
     if (d is None) or (k is None):
         return None

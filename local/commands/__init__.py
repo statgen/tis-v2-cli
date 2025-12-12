@@ -7,7 +7,7 @@ import argparse
 
 from pretty_cli import PrettyCli
 
-from . import base, version, job, admin, server
+from . import base, version, job, admin, server, query
 
 
 def parse_arguments() -> base.Args:
@@ -19,6 +19,7 @@ def parse_arguments() -> base.Args:
 
     version.register_version_parser(subparsers)
     server.register_server_parser(subparsers)
+    query.register_query_parser(subparsers)
     job.register_job_parser(subparsers)
     admin.register_admin_parser(subparsers)
 
@@ -38,6 +39,8 @@ def parse_arguments() -> base.Args:
             return version.parse_version_command(raw_args, global_args)
         case base.Command.SERVER:
             return server.parse_server_command(raw_args, global_args)
+        case base.Command.QUERY:
+            return query.parse_query_command(raw_args, global_args)
         case base.Command.JOB:
             return job.parse_job_command(raw_args, global_args)
         case base.Command.ADMIN:

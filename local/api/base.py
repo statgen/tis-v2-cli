@@ -14,7 +14,7 @@ from pretty_cli import PrettyCli
 
 from local import ansi_colors
 from local.request_schema import JobParams, AdminListJobsState
-from local.response_schema import JobInfo, JobResponse, JobState, UserResponse, LoginResponse, RefpanelResponse, PopulationResponse, DownloadInfo
+from local.response_schema import JobInfo, JobResponse, JobState, UserResponse, LoginResponse, RefpanelResponse, PopulationResponse, DownloadInfo, ServerResponse
 from local.util import get_user_agent
 
 
@@ -387,6 +387,15 @@ class TisV2Api:
                 downloaded_files.append(DownloadInfo(name=file.name, path=None, hash=None, size=file.size, user=None, count=None, parameter_id=None))
 
         return downloaded_files
+
+    def get_server_info(self) -> ServerResponse:
+        """
+        Returns basic information about the server itself, including the caller
+        identity, the server name, and if the server is in maintenance mode.
+        """
+
+        response = self._get(url="api/v2/server")
+        return ServerResponse.from_json(response.json())
 
     def admin_login(self, username: str, password: str) -> LoginResponse:
         """Requests an admin-level token from the server."""
