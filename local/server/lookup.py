@@ -183,8 +183,10 @@ def _load_servers() -> None:
             assert refpanel_id not in processed_refpanels
             processed_refpanels[refpanel_id] = refpanel
 
-            assert refpanel_id not in refpanel_lookup
-            refpanel_lookup[refpanel_id] = refpanel
+            refpanel_id_norm = normalize_name(refpanel_id)
+            assert refpanel_id_norm not in refpanel_lookup
+            refpanel_lookup[refpanel_id_norm] = refpanel
+
             for alias in refpanel_aliases:
                 alias_norm = normalize_name(alias)
                 assert alias_norm not in refpanel_lookup
