@@ -6,7 +6,7 @@ Provides typed objects for response payloads.
 from enum import Enum, StrEnum
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Callable
 
 from local.util import parse_size
 
@@ -65,7 +65,7 @@ class StepInfo:
         return StepInfo(
             id           = int(data["id"]),
             name         = _str_or_none(data, "name"),
-            log_messages = _process_list(data["logMessages"], MessageInfo.from_json),
+            log_messages = _process_list(data, "logMessages", MessageInfo.from_json),
         )
 
 
@@ -86,7 +86,7 @@ class TreeItemInfo:
             hash   = _str_or_none(data, "hash"),
             size   = _str_or_none(data, "size"),
             folder = bool(data["folder"]),
-            children = _process_list(data["childs"], TreeItemInfo.from_json),
+            children = _process_list(data, "childs", TreeItemInfo.from_json),
         )
 
 
@@ -139,8 +139,8 @@ class OutputInfo:
             type         = OutputType(data["type"]) if data["type"] is not None else None,
             download     = bool(data["download"   ]),
             auto_export  = bool(data["autoExport"]),
-            tree         = _process_list(data["tree" ], TreeItemInfo.from_json),
-            files        = _process_list(data["files"], DownloadInfo.from_json),
+            tree         = _process_list(data, "tree" , TreeItemInfo.from_json),
+            files        = _process_list(data, "files", DownloadInfo.from_json),
         )
 
 
@@ -182,8 +182,8 @@ class JobInfo:
             deleted_on        = _db_timestamp_to_datetime(data["deletedOn"  ]),
             current_time      = _db_timestamp_to_datetime(data["currentTime"]),
             state             = JobState(data["state"]),
-            steps             = _process_list(data["steps"       ], StepInfo.from_json  ),
-            output_params     = _process_list(data["outputParams"], OutputInfo.from_json),
+            steps             = _process_list(data, "steps"       , StepInfo.from_json  ),
+            output_params     = _process_list(data, "outputParams", OutputInfo.from_json),
         )
 
 
@@ -368,9 +368,9 @@ class ServerResponse:
             user_without_email_description = _str_required(data["userWithoutEmailDescription"]),
             oauth                          = data["oauth"],
             user                           = ServerUserResponse.from_json(data["user"]) if "user" in data else None,
-            apps                           = _process_list(data["apps"], ServerAppResponse.from_json),
-            deprecated_apps                = _process_list(data["deprecatedApps"], ServerAppResponse.from_json),
-            experimental_apps              = _process_list(data["experimentalApps"], ServerAppResponse.from_json),
+            apps                           = _process_list(data, "apps", ServerAppResponse.from_json),
+            deprecated_apps                = _process_list(data, "deprecatedApps", ServerAppResponse.from_json),
+            experimental_apps              = _process_list(data, "experimentalApps", ServerAppResponse.from_json),
             logged_in                      = bool(data["loggedIn"]),
             maintenance                    = bool(data["maintenance"]),
             maintenance_message            = _str_or_none(data, "maintenanceMessage"),
@@ -381,7 +381,7 @@ def _str_or_none(d: dict[str, Any], k: str) -> str | None:
     if (d is None) or (k is None):
         return None
 
-    if not k in d:
+    if k not in d:
         return None
 
     field = d[k]
@@ -403,11 +403,19 @@ def _str_required(field) -> str:
     return field
 
 
-def _process_list(field, func) -> list | None:
-    if not isinstance(field, list):
+def _process_list(d: dict[str, Any], k: str, func: Callable) -> list | None:
+    if not isinstance(d, dict) or (len(d) < 1):
         return None
 
-    if len(field) < 1:
+    if (not isinstance(k, str)) or (len(k) < 1):
+        return None
+
+    if k not in d:
+        return None
+
+    field = d[k]
+
+    if (not isinstance(field, list)) or (len(field) < 1):
         return None
 
     return [ func(x) for x in field ]
