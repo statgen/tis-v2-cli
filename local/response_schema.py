@@ -347,9 +347,6 @@ class ServerUserResponse:
 @dataclass
 class ServerResponse:
     name                           : str
-    background                     : str
-    foreground                     : str
-    footer                         : str
     email_required                 : bool
     user_email_description         : str
     user_without_email_description : str
@@ -359,7 +356,6 @@ class ServerResponse:
     deprecated_apps                : list[ServerAppResponse] | None
     experimental_apps              : list[ServerAppResponse] | None
     logged_in                      : bool
-    navigation                     : list[ServerNavigationResponse] | None
     maintenance                    : bool
     maintenance_message            : str | None
 
@@ -367,9 +363,6 @@ class ServerResponse:
     def from_json(data) -> "ServerResponse":
         return ServerResponse(
             name                           = _str_required(data["name"]),
-            background                     = _str_required(data["background"]),
-            foreground                     = _str_required(data["foreground"]),
-            footer                         = _str_required(data["footer"]),
             email_required                 = bool(data["emailRequired"]),
             user_email_description         = _str_required(data["userEmailDescription"]),
             user_without_email_description = _str_required(data["userWithoutEmailDescription"]),
@@ -379,9 +372,8 @@ class ServerResponse:
             deprecated_apps                = _process_list(data["deprecatedApps"], ServerAppResponse.from_json),
             experimental_apps              = _process_list(data["experimentalApps"], ServerAppResponse.from_json),
             logged_in                      = bool(data["loggedIn"]),
-            navigation                     = _process_list(data["navigation"], ServerNavigationResponse.from_json),
-            maintenance                    = bool(data["maintenace"]), # NOTE: Variable name is mistyped in response body.
-            maintenance_message            = _str_or_none(data, "maintenaceMessage"), # NOTE: Variable name is mistyped in response body.
+            maintenance                    = bool(data["maintenance"]),
+            maintenance_message            = _str_or_none(data, "maintenanceMessage"),
         )
 
 
